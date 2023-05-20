@@ -1,0 +1,5 @@
+*.csv
+*.xlsx
+venv/
+.idea/
+floyd/cmake-build-debug
