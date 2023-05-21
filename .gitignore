@@ -2,4 +2,4 @@
 *.xlsx
 venv/
 .idea/
-floyd/cmake-build-debug
+src/floyd/cmake-build-debug

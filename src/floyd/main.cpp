@@ -9,7 +9,7 @@ const int n = 1630;
 double a[n][n], w[n][n];
 
 int main() {
-    freopen("data.txt", "r", stdin);
+    freopen("data/processed/data.txt", "r", stdin);
 //    freopen("result.txt", "w", stdout);
 
     for (int i = 0; i < n; ++i) {
