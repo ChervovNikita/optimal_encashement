@@ -6,11 +6,13 @@ from ortools.constraint_solver import pywrapcp
 
 INF = int(1e4)
 class VehicleRoutingProblem:
-    def __init__(self, dist, service_time, work_time):
+    def __init__(self, dist, service_time, work_time, mask):
         self.dist = dist
         self.service_time = service_time
         self.work_time = 100 * work_time
         self.cnt_terminals = dist['from_int'].max() + 1
+        self.mask = sorted(list(mask))
+        self.toid = [*[-1], *[val for val in self.mask], *[-2]]
 
     def print_solution(self, data, manager, routing, solution):
         """Prints solution on console."""
@@ -21,12 +23,12 @@ class VehicleRoutingProblem:
             plan_output = 'Route for vehicle {}:\n'.format(vehicle_id)
             route_distance = 0
             while not routing.IsEnd(index):
-                plan_output += ' {} -> '.format(manager.IndexToNode(index))
+                plan_output += ' {} -> '.format(self.toid[manager.IndexToNode(index)])
                 previous_index = index
                 index = solution.Value(routing.NextVar(index))
                 route_distance += routing.GetArcCostForVehicle(
                     previous_index, index, vehicle_id)
-            plan_output += '{}\n'.format(manager.IndexToNode(index))
+            plan_output += '{}\n'.format(self.toid[manager.IndexToNode(index)])
             plan_output += 'Distance of the route: {}m\n'.format(route_distance)
             print(plan_output)
             max_route_distance = max(route_distance, max_route_distance)
@@ -48,6 +50,9 @@ class VehicleRoutingProblem:
         distance_matrix[0, cnt_terminals + 1] = 0
         distance_matrix[cnt_terminals + 1, 0] = INF
         distance_matrix = (100 * distance_matrix).astype(int)
+
+        take = [0] + [i + 1 for i in self.mask] + [cnt_terminals + 1]
+        distance_matrix = distance_matrix[take]
         return distance_matrix
 
     def get_routing(self, vrp_data):
@@ -97,10 +102,10 @@ class VehicleRoutingProblem:
         vrp_data = {'distance_matrix': distance_matrix,
                     'num_vehicles': num_vehicles,
                     # 'depot': 0,
-                    'num_locations': self.cnt_terminals + 2}
+                    'num_locations': len(self.mask) + 2}
 
         vrp_data['starts'] = [0] * vrp_data['num_vehicles']
-        vrp_data['ends'] = [int(self.cnt_terminals + 1)] * vrp_data['num_vehicles']
+        vrp_data['ends'] = [int(len(self.mask) + 1)] * vrp_data['num_vehicles']
 
         routing, manager = self.get_routing(vrp_data)
         search_parameters = self.get_search_parameters()
@@ -121,7 +126,8 @@ if __name__ == '__main__':
     le.fit(dist['Origin_tid'])
     dist['from_int'] = le.transform(dist['Origin_tid'])
     dist['to_int'] = le.transform(dist['Destination_tid'])
-    myvrp = VehicleRoutingProblem(dist, 10, 10 * 60)
+    sample_mask = {i for i in range(0, 1600, 2)}  # first 100 points
+    myvrp = VehicleRoutingProblem(dist, 10, 10 * 60, sample_mask)
     result = myvrp.find_vrp(43, True)
     if not result:
         print("Didn't find")
