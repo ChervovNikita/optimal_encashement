@@ -5,13 +5,11 @@ from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
 INF = int(1e4)
-
-
 class VehicleRoutingProblem:
     def __init__(self, dist, service_time, work_time):
         self.dist = dist
         self.service_time = service_time
-        self.work_time = work_time
+        self.work_time = 100 * work_time
         self.cnt_terminals = dist['from_int'].max() + 1
 
     def print_solution(self, data, manager, routing, solution):
@@ -49,7 +47,7 @@ class VehicleRoutingProblem:
 
         distance_matrix[0, cnt_terminals + 1] = 0
         distance_matrix[cnt_terminals + 1, 0] = INF
-        distance_matrix = distance_matrix.astype(int)
+        distance_matrix = (100 * distance_matrix).astype(int)
         return distance_matrix
 
     def get_routing(self, vrp_data):
@@ -118,11 +116,13 @@ class VehicleRoutingProblem:
 
 
 if __name__ == '__main__':
-    dist = pd.read_csv('data/raw/times v4.csv')
+    dist = pd.read_csv('data/times v4.csv')
     le = preprocessing.LabelEncoder()
     le.fit(dist['Origin_tid'])
     dist['from_int'] = le.transform(dist['Origin_tid'])
     dist['to_int'] = le.transform(dist['Destination_tid'])
     myvrp = VehicleRoutingProblem(dist, 10, 10 * 60)
-    myvrp.find_vrp(43, True)
+    result = myvrp.find_vrp(43, True)
+    if not result:
+        print("Didn't find")
 

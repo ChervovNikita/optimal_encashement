@@ -3,3 +3,4 @@
 venv/
 .idea/
 src/floyd/cmake-build-debug
+*.ipynb_checkpoints/
