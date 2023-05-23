@@ -11,7 +11,10 @@ class VehicleRoutingProblem:
         self.service_time = service_time
         self.work_time = 100 * work_time
         self.cnt_terminals = dist['from_int'].max() + 1
-        self.mask = sorted(list(mask))
+        if type(mask) == list:
+            self.mask = [i for i in range(self.cnt_terminals) if mask[i]]
+        else:
+            self.mask = sorted(list(mask))
         self.toid = [*[-1], *[val for val in self.mask], *[-2]]
 
     def print_solution(self, data, manager, routing, solution):
@@ -90,7 +93,7 @@ class VehicleRoutingProblem:
         distance_dimension.SetGlobalSpanCostCoefficient(100)
         return routing, manager
 
-    def get_search_parameters(self, solution_limit=100, time_limit=30):
+    def get_search_parameters(self, solution_limit=100, time_limit=1):
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
         search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.AUTOMATIC)
         search_parameters.solution_limit = solution_limit
@@ -126,7 +129,7 @@ if __name__ == '__main__':
     le.fit(dist['Origin_tid'])
     dist['from_int'] = le.transform(dist['Origin_tid'])
     dist['to_int'] = le.transform(dist['Destination_tid'])
-    sample_mask = {i for i in range(0, 1600, 2)}  # first 100 points
+    sample_mask = {i for i in range(0, 1630, 1)}  # first 100 points
     myvrp = VehicleRoutingProblem(dist, 10, 10 * 60, sample_mask)
     result = myvrp.find_vrp(43, True)
     if not result:
