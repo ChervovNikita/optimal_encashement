@@ -4,12 +4,15 @@ from sklearn import preprocessing
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 from copy import deepcopy
+from tqdm import tqdm
 
 INF = int(1e4)
+MAX_MONEY = 1e6
+MAX_DAY = 14
 
 
 class VRPP:
-    def __init__(self, dist, service_time, work_time, num_vehicles):
+    def __init__(self, dist, service_time, work_time, num_vehicles, solution_limit, time_limit, dead_loss):
         self.mask = None
         self.toid = None
         self.real_cnt = None
@@ -18,6 +21,9 @@ class VRPP:
         self.work_time = 100 * work_time
         self.cnt_terminals = dist['from_int'].max() + 1
         self.num_vehicles = num_vehicles
+        self.solution_limit = solution_limit
+        self.time_limit = time_limit
+        self.dead_loss = dead_loss
 
     def print_solution(self, data, manager, routing, solution):
         """Prints solution on console."""
@@ -79,13 +85,6 @@ class VRPP:
                 take[i + 1] = True
         distance_matrix = distance_matrix[take, :][:, take]
 
-        # tmp_matrix = deepcopy(distance_matrix)
-        # distance_matrix[1:15, :], distance_matrix[15:29, :] = \
-        #     deepcopy(tmp_matrix[15:29, :]), deepcopy(tmp_matrix[1:15, :])
-        # tmp_matrix = deepcopy(distance_matrix)
-        # distance_matrix[:, 1:15], distance_matrix[:, 15:29] = \
-        #     deepcopy(tmp_matrix[:, 15:29]), deepcopy(tmp_matrix[:, 1:15])
-
         return distance_matrix
 
     def get_routing(self, vrp_data, cost):
@@ -112,21 +111,19 @@ class VRPP:
             True,
             dimension_name)
 
-        for i in range(len(cost)):
-            routing.AddDisjunction([manager.NodeToIndex(i + 1)], cost[i] * INF * 10)
-
-        # for node in range(1, len(vrp_data['distance_matrix']) - 1):
-        #     routing.AddDisjunction([manager.NodeToIndex(node)], cost[node] * INF * 10)
+        if not self.dead_loss:
+            for i in range(len(cost)):
+                routing.AddDisjunction([manager.NodeToIndex(i + 1)], cost[i] * INF * 100)
 
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
         return routing, manager
 
-    def get_search_parameters(self, solution_limit=100, time_limit=5):
+    def get_search_parameters(self):
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-        search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.AUTOMATIC)
-        search_parameters.solution_limit = solution_limit
-        search_parameters.time_limit.seconds = time_limit
+        search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.PARALLEL_CHEAPEST_INSERTION)
+        search_parameters.solution_limit = self.solution_limit
+        search_parameters.time_limit.seconds = self.time_limit
         return search_parameters
 
     def find_vrp(self, cost, mask=None, solution_limit=100, time_limit=5):
@@ -175,13 +172,39 @@ class GetLoss:
         self.c = c
         self.t = t
 
-    def __call__(self, money, max_money, day, max_day):
-        if money >= max_money or day >= max_day:
+    def __call__(self, money, max_money, day, max_day, step=0):
+        if (money >= max_money or day >= max_day) and step == 0:
             return INF
-        return self.a * (money * 2 / 100 / 365) + self.b * (max(100, money / 1e4)) + self.c + self.t * (max_day - day)
+        return self.a * (money * 2 / 100 / 365) - self.b * (max(100, money / 1e4)) + self.c + self.t * (max_day - day)
+
+
+def simulate(vrp: VRPP, loss: GetLoss, real_loss: GetLoss, data):
+    current = np.zeros_like(data[0])
+    waiting = np.zeros_like(data[0])
+    total_loss = 0
+    for day in range(data.shape[0]):
+        current += data[day]
+        cost = [loss(current[i], MAX_MONEY, waiting[i], MAX_DAY) for i in range(data.shape[1])]
+        took, _ = vrp.find_vrp(cost)
+        for i in range(data.shape[1]):
+            if took[i]:
+                total_loss += real_loss(current[i], MAX_MONEY, waiting, MAX_DAY, 1)
+                current[i] = 0
+                waiting[i] = 0
+            else:
+                if real_loss(current[i], MAX_MONEY, waiting, MAX_DAY) == INF:
+                    total_loss += INF
 
 
 if __name__ == '__main__':
+    # data = pd.read_excel('../data/terminal_data_hackathon v4.xlsx', sheet_name='Incomes')
+    # data = data.to_numpy()[:, 1:].T
+    # print(data.shape)
+    #
+    # loss = GetLoss(1, 1, 0, 0)
+    # real_loss = GetLoss(1, 1, 0, 0)
+
+
     dist = pd.read_csv('../data/times v4.csv')
     le = preprocessing.LabelEncoder()
     le.fit(dist['Origin_tid'])
@@ -189,11 +212,10 @@ if __name__ == '__main__':
     dist['to_int'] = le.transform(dist['Destination_tid'])
 
     cost = [1 for i in range(1630)]
-
-    mask = [int(i > 700) for i in range(1630)]
-    myvrp = VRPP(dist, 10, 10 * 60, 20)
-    visited, paths = myvrp.find_vrp(cost, mask)
+    # for i in range(55, 100):
+    #     cost[i] = 100
+    myvrp = VRPP(dist, 10, 10 * 60, 20, 100, 100, False)
+    visited, paths = myvrp.find_vrp(cost)
     print(sum(visited))
-    print(visited)
-    for path in paths:
-        print(path)
+    # for i in range(len(visited)):
+    #     print(i, visited[i])
