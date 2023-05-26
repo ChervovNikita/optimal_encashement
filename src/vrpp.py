@@ -3,12 +3,16 @@ import numpy as np
 from sklearn import preprocessing
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
+from copy import deepcopy
 
 INF = int(1e4)
 
 
 class VRPP:
     def __init__(self, dist, service_time, work_time, num_vehicles):
+        self.mask = None
+        self.toid = None
+        self.real_cnt = None
         self.dist = dist
         self.service_time = service_time
         self.work_time = 100 * work_time
@@ -43,9 +47,9 @@ class VRPP:
             i = routing.Start(vehicle)
             while not routing.IsEnd(i):
                 i = solution.Value(routing.NextVar(i))
-                if i > 0 and i <= self.cnt_terminals:
-                    visited[i - 1] = 1
-                    path.append(i - 1)
+                if i > 0 and i <= self.real_cnt:
+                    visited[self.toid[i]] = 1
+                    path.append(self.toid[i])
             paths.append(path)
         return visited, paths
 
@@ -53,6 +57,16 @@ class VRPP:
         cnt_terminals = self.cnt_terminals
         distance_matrix = np.ones((cnt_terminals + 2, cnt_terminals + 2)) * INF
         for i, j, w in zip(self.dist['from_int'], self.dist['to_int'], self.dist['Total_Time']):
+            # if 0 <= i < 10:
+            #     i += 10
+            # if 10 <= i < 20:
+            #     i -= 10
+            # if 0 <= j < 10:
+            #     j += 10
+            # if 10 <= j < 20:
+            #     j -= 10
+            # if i < 20 and j < 20 and str(w) == '47.49':
+            #     print(i, j)
             distance_matrix[i + 1, j + 1] = w + self.service_time
 
         for i in range(1, cnt_terminals + 1):
@@ -65,6 +79,26 @@ class VRPP:
         distance_matrix[0, cnt_terminals + 1] = 0
         distance_matrix[cnt_terminals + 1, 0] = INF
         distance_matrix = (100 * distance_matrix).astype(int)
+
+        # take = [0] + [i + 1 for i in self.mask] + [cnt_terminals + 1]
+        take = [False for i in range(cnt_terminals + 2)]
+        take[0] = True
+        take[cnt_terminals + 1] = True
+        for i in range(len(self.mask)):
+            if self.mask[i]:
+                take[i + 1] = True
+        distance_matrix = distance_matrix[take, :][:, take]
+
+        # distance_matrix[1:11, :], distance_matrix[11:21, :] = distance_matrix[11:21, :], distance_matrix[1:11, :]
+        # distance_matrix[:, 1:11], distance_matrix[:, 11:21] = distance_matrix[:, 11:21], distance_matrix[:, 1:11]
+
+        # with open('test2.txt', 'w') as f:
+        #     for i in range(0, 22, 1):
+        #         for j in range(0, 22, 1):
+        #             i = min(i, len(distance_matrix) - 1)
+        #             j = min(j, len(distance_matrix) - 1)
+        #             f.write(" " * (10 - len(str(distance_matrix[i, j]))) + str(distance_matrix[i, j]) + ' ')
+        #         f.write('\n')
 
         return distance_matrix
 
@@ -92,8 +126,11 @@ class VRPP:
             True,
             dimension_name)
 
-        for node in range(1, len(vrp_data['distance_matrix']) - 1):
-            routing.AddDisjunction([manager.NodeToIndex(node)], cost[node] * INF * 10)
+        for i in range(len(cost)):
+            routing.AddDisjunction([manager.NodeToIndex(i + 1)], cost[i] * INF * 10)
+
+        # for node in range(1, len(vrp_data['distance_matrix']) - 1):
+        #     routing.AddDisjunction([manager.NodeToIndex(node)], cost[node] * INF * 10)
 
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
@@ -106,15 +143,33 @@ class VRPP:
         search_parameters.time_limit.seconds = time_limit
         return search_parameters
 
-    def find_vrp(self, cost):
-        cost = [*[0], *[max(0, c) for c in cost], *[0]]
+    def find_vrp(self, cost, mask=None):
+        if mask is None:
+            mask = [1 for _ in range(self.cnt_terminals)]
+
+        self.real_cnt = sum(mask)
+
+        self.mask = mask
+        tmp = [i for i in range(len(self.mask)) if self.mask[i]]
+        self.toid = [*[-1], *[val for val in tmp], *[-2]]
+
+        if len(cost) != sum(mask):
+            r_cost = []
+            for i in range(len(mask)):
+                if mask[i]:
+                    r_cost.append(cost[i])
+            cost = deepcopy(r_cost)
+        cost = [max(0, c) for c in cost]
         distance_matrix = self.get_distance_matrix()
+
+        # print(distance_matrix[:10, :10])
+
         vrp_data = {'distance_matrix': distance_matrix,
                     'num_vehicles': self.num_vehicles,
-                    'num_locations': self.cnt_terminals + 2}
+                    'num_locations': self.real_cnt + 2}
 
         vrp_data['starts'] = [0] * vrp_data['num_vehicles']
-        vrp_data['ends'] = [int(self.cnt_terminals + 1)] * vrp_data['num_vehicles']
+        vrp_data['ends'] = [int(self.real_cnt + 1)] * vrp_data['num_vehicles']
 
         routing, manager = self.get_routing(vrp_data, cost)
         search_parameters = self.get_search_parameters()
@@ -140,11 +195,6 @@ class GetLoss:
         return self.a * (money * 2 / 100 / 365) + self.b * (max(100, money / 1e4)) + self.c + self.t * (max_day - day)
 
 
-
-def test(a, b, c, t, data):
-    return 1
-
-
 if __name__ == '__main__':
     dist = pd.read_csv('../data/times v4.csv')
     le = preprocessing.LabelEncoder()
@@ -156,9 +206,10 @@ if __name__ == '__main__':
     cost = [0 for i in range(1630)]
     for i in range(10):
         cost[i] = 1000
+    mask = [int(i % 10 < 5) for i in range(1630)]
     myvrp = VRPP(dist, 10, 10 * 60, 20)
-    visited, paths = myvrp.find_vrp(cost)
-    print(visited)
+    visited, paths = myvrp.find_vrp(cost, mask)
     print(sum(visited))
+    print(visited)
     for path in paths:
         print(path)
