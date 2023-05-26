@@ -57,16 +57,6 @@ class VRPP:
         cnt_terminals = self.cnt_terminals
         distance_matrix = np.ones((cnt_terminals + 2, cnt_terminals + 2)) * INF
         for i, j, w in zip(self.dist['from_int'], self.dist['to_int'], self.dist['Total_Time']):
-            # if 0 <= i < 10:
-            #     i += 10
-            # if 10 <= i < 20:
-            #     i -= 10
-            # if 0 <= j < 10:
-            #     j += 10
-            # if 10 <= j < 20:
-            #     j -= 10
-            # if i < 20 and j < 20 and str(w) == '47.49':
-            #     print(i, j)
             distance_matrix[i + 1, j + 1] = w + self.service_time
 
         for i in range(1, cnt_terminals + 1):
@@ -89,16 +79,12 @@ class VRPP:
                 take[i + 1] = True
         distance_matrix = distance_matrix[take, :][:, take]
 
-        # distance_matrix[1:11, :], distance_matrix[11:21, :] = distance_matrix[11:21, :], distance_matrix[1:11, :]
-        # distance_matrix[:, 1:11], distance_matrix[:, 11:21] = distance_matrix[:, 11:21], distance_matrix[:, 1:11]
-
-        # with open('test2.txt', 'w') as f:
-        #     for i in range(0, 22, 1):
-        #         for j in range(0, 22, 1):
-        #             i = min(i, len(distance_matrix) - 1)
-        #             j = min(j, len(distance_matrix) - 1)
-        #             f.write(" " * (10 - len(str(distance_matrix[i, j]))) + str(distance_matrix[i, j]) + ' ')
-        #         f.write('\n')
+        # tmp_matrix = deepcopy(distance_matrix)
+        # distance_matrix[1:15, :], distance_matrix[15:29, :] = \
+        #     deepcopy(tmp_matrix[15:29, :]), deepcopy(tmp_matrix[1:15, :])
+        # tmp_matrix = deepcopy(distance_matrix)
+        # distance_matrix[:, 1:15], distance_matrix[:, 15:29] = \
+        #     deepcopy(tmp_matrix[:, 15:29]), deepcopy(tmp_matrix[:, 1:15])
 
         return distance_matrix
 
@@ -202,11 +188,9 @@ if __name__ == '__main__':
     dist['from_int'] = le.transform(dist['Origin_tid'])
     dist['to_int'] = le.transform(dist['Destination_tid'])
 
-    # cost = [(1630 - i) // 100 for i in range(1630)]
-    cost = [0 for i in range(1630)]
-    for i in range(10):
-        cost[i] = 1000
-    mask = [int(i % 10 < 5) for i in range(1630)]
+    cost = [1 for i in range(1630)]
+
+    mask = [int(i > 700) for i in range(1630)]
     myvrp = VRPP(dist, 10, 10 * 60, 20)
     visited, paths = myvrp.find_vrp(cost, mask)
     print(sum(visited))
