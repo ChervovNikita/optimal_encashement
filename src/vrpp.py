@@ -129,7 +129,7 @@ class VRPP:
         search_parameters.time_limit.seconds = time_limit
         return search_parameters
 
-    def find_vrp(self, cost, mask=None):
+    def find_vrp(self, cost, mask=None, solution_limit=100, time_limit=5):
         if mask is None:
             mask = [1 for _ in range(self.cnt_terminals)]
 
@@ -158,7 +158,7 @@ class VRPP:
         vrp_data['ends'] = [int(self.real_cnt + 1)] * vrp_data['num_vehicles']
 
         routing, manager = self.get_routing(vrp_data, cost)
-        search_parameters = self.get_search_parameters()
+        search_parameters = self.get_search_parameters(solution_limit, time_limit)
 
         solution = routing.SolveWithParameters(search_parameters)
         # if solution:
