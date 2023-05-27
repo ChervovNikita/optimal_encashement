@@ -155,7 +155,7 @@ class VRPP:
         vrp_data['ends'] = [int(self.real_cnt + 1)] * vrp_data['num_vehicles']
 
         routing, manager = self.get_routing(vrp_data, cost)
-        search_parameters = self.get_search_parameters(solution_limit, time_limit)
+        search_parameters = self.get_search_parameters()
 
         solution = routing.SolveWithParameters(search_parameters)
         # if solution:
