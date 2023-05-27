@@ -46,9 +46,12 @@ class Predictor:
         return {'best_loss': best[0], 'best_id': best[1], 'force_id': force_id, 'daily_losses': daily_loss}
 
     def get_nikita_result(self, day, idx, left, cash, cur_cash):
-        cp = cash[idx, day - 1:]
-        cp[0] = cur_cash[idx]
-        res = optimal_mask.find_optimal(self.config['horizont_loss_counting'], left, cp)
+        if day == 0:
+            cp = np.concatenate([[0], cash[idx].copy()])
+        else:
+            cp = cash[idx, day - 1:].copy()
+            cp[0] = cur_cash[idx]
+        res = optimal_mask.find_optimal(14, left, cp)
         return res
 
     def build_ans(self, terminal_income, num_days=31, num_vehicles=25, vrp_time_limit=100, verbose=True):
@@ -81,13 +84,13 @@ class Predictor:
                         assert False, f'Got infinity loss for day {d}, terminal {i}'
 
                 if visited[i]:
-                    cur_loss += self.config['terminal_service_cost']
+                    cur_loss += max(self.config['terminal_service_cost'], cur_cash[i] * self.config['terminal_service_persent'])
                     cur_cash[i] = 0
                     time_until_force[i] = self.config['max_not_service_days']
 
                 time_until_force[i] -= 1
-                cur_cash[i] += terminal_income[i][d]
                 cur_loss += cur_cash[i] * self.config['persent_day_income']
+                cur_cash[i] += terminal_income[i][d]
 
             hist['loss'].append(cur_loss)
             hist['visited'].append(visited)

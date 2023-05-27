@@ -11,6 +11,7 @@ class Predictor:
     def __init__(self, config, dist):
         self.config = config
         self.dist = dist
+        self.hist = {}
 
     def count_term_loss(self, cash, idx):
         loss = 0
@@ -48,10 +49,11 @@ class Predictor:
         prev = []
         num_terminals = len(terminal_income)
         cur_cash = np.zeros(num_terminals)
-        hist = {'visited': [], 'loss': []}
+        hist = {'visited': [], 'loss': [], 'opt': [], 'prev': []}
+        self.hist = hist
+
         opt = pd.DataFrame([self.find_optimal_day(el) for el in terminal_income])
-        first_opt = opt.copy()
-        
+
         if verbose:
             iterator = tqdm(range(num_days))
         else:
@@ -75,7 +77,7 @@ class Predictor:
             cur_loss = 0
             for i in range(num_terminals):
                 if visited[i]:
-                    cur_loss += self.config['terminal_service_cost']
+                    cur_loss += max(self.config['terminal_service_cost'], cur_cash[i] * self.config['terminal_service_persent'])
                     cur_cash[i] = 0
                     now = self.find_optimal_day(terminal_income[i][d:])
                     now['best_id'] += d
@@ -85,10 +87,12 @@ class Predictor:
                 elif mask[i]:
                     prev.append(i)
                     assert opt.loc[i, 'daily_losses'][d + 1] != INF, f'Got infinity loss for day {d}, terminal {i}, opt.loc[i] = {opt.loc[i]}'
-                    
-                cur_cash[i] += terminal_income[i][d]
+
                 cur_loss += cur_cash[i] * self.config['persent_day_income']
+                cur_cash[i] += terminal_income[i][d]
 
             hist['loss'].append(cur_loss)
+            hist['opt'].append(opt.copy())
+            hist['prev'].append(prev)
 
-        return hist, first_opt
+        return hist

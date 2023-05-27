@@ -13,6 +13,7 @@ def find_optimal(day, wait, adds):
     with open(buffer + "_out", 'w') as f:
         f.write("")
     if not os.path.exists(script_path):
+        print('Build script')
         os.system(f'g++ {code_path} -o {script_path}')
     os.system(f'{script_path} < {buffer + "_in"} > {buffer + "_out"}')
     status, delta = [float(val) for val in open(buffer + "_out", 'r').readline().strip().split(' ')]
