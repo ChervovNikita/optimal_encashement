@@ -1,9 +1,12 @@
-#include <bits/stdc++.h>
+// #include <bits/stdc++.h>
+#include "vector"
+#include "iostream"
+#include "algorithm"
 
 using namespace std;
 
 const int max_wait = 14;
-const int max_cash = 1'000'000;
+const int max_cash = 1000000;
 const double INF = 1e9;
 
 inline double loss(double x, bool take) {

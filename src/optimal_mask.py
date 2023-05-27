@@ -1,8 +1,10 @@
 import os
 
-code_path = './src/optimal_mask/main.cpp'
-script_path = './src/cpp_mask'
-buffer = './data/processed/buffer'
+dirname = os.path.dirname(os.path.abspath(__file__))
+
+code_path = os.path.join(dirname, 'optimal_mask/main.cpp')
+script_path = os.path.join(dirname, 'cpp_mask')
+buffer = os.path.join(dirname, '../data/processed/buffer')
 
 def find_optimal(day, wait, adds):
     with open(buffer + '_in', 'w') as f:
