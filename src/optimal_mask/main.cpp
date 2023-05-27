@@ -16,73 +16,73 @@ inline double loss(double was, double add, bool take) {
     }
 }
 
+int sum(vector<int>& p, int l, int r) {
+    if (!l) return p[r];
+    return p[r] - p[l - 1];
+}
+
+double skip(vector<int>& p, int l, int r, int extra = 0) {
+    double res = 0;
+    int current = extra;
+    for (int i = l; i < r; ++i) {
+        res += loss(current, p[i], 0);
+        current += p[i];
+    }
+    return res;
+}
+
 signed main() {
     int days, wait;
     cin >> days >> wait;
+//    double alpha, beta;
+//    cin >> alpha >> beta;
+
     int begin_with; cin >> begin_with;
-    vector<int> add(days - 1);
+    vector<int> add(days);
     for (int i = 0; i < days; ++i) {
         cin >> add[i];
     }
-    double best_loss = INF;
-    int best_mask = 0;
-    double best_skip_loss = INF;
-    int best_skip_mask = 0;
 
-    for (int mask = 0; mask < (1 << days); ++mask) {
-        int first_take = max_wait + 10;
-        int current_wait = 0;
-        double cur_loss = 0;
-        double cur_cash = begin_with;
+    vector<int> pref = add;
+    for (int i = 1; i < days; ++i) {
+        pref[i] += pref[i - 1];
+    }
 
-        for (int day = 0; day < days; ++day) {
-            ++current_wait;
-            cur_loss += loss(cur_cash, add[day], mask & (1 << day));
-            if (mask & (1 << day)) {
-                first_take = min(first_take, day);
-                current_wait = 0;
-                cur_cash = 0;
-            }
-            cur_cash += add[day];
-            if (current_wait == max_wait) {
-                cur_loss += INF;
-            }
+    vector<vector<double>> dp(days, vector<double>(2, INF));
+
+    dp[0][0] = loss(begin_with, add[0], 0);
+    dp[0][1] = loss(begin_with, add[1], 1);
+
+    for (int i = 1; i < days; ++i) {
+        if (i <= wait) {
+            dp[i][1] = min(dp[i][1], skip(add, 0, i, begin_with) + loss(begin_with + sum(pref, 0, i - 1), add[i], 1));
         }
-        if (first_take > wait) {
-            cur_loss += INF;
-        }
-        if (mask & 1) {
-            if (best_loss > cur_loss) {
-                best_loss = cur_loss;
-                best_mask = mask;
-            }
-        } else {
-            if (best_skip_loss > cur_loss) {
-                best_skip_loss = cur_loss;
-                best_skip_mask = mask;
-            }
+        for (int last = max(0, i - max_wait); last < i; ++last) {
+            dp[i][0] = min(dp[i][0], dp[last][1] + skip(add, last, i));
+            dp[i][1] = min(dp[i][1], dp[last][1] + skip(add, last, i - 1) + loss(sum(pref, last, i - 1), add[i], 1));
         }
     }
 
+    double full_res = max(dp[days - 1][0], dp[days - 1][1]);
 
-    if (best_skip_loss < best_loss) {
+    dp = vector<vector<double>>(days, vector<double>(2, INF));
+
+    dp[0][0] = loss(begin_with, add[0], 0);
+
+    for (int i = 1; i < days; ++i) {
+        if (i <= wait) {
+            dp[i][1] = min(dp[i][1], skip(add, 0, i, begin_with) + loss(begin_with + sum(pref, 0, i - 1), add[i], 1));
+        }
+        for (int last = max(0, i - max_wait); last < i; ++last) {
+            dp[i][0] = min(dp[i][0], dp[last][1] + skip(add, last, i));
+            dp[i][1] = min(dp[i][1], dp[last][1] + skip(add, last, i - 1) + loss(sum(pref, last, i - 1), add[i], 1));
+        }
+    }
+    double res = max(dp[days - 1][0], dp[days - 1][1]);
+
+    if (abs(full_res - res) < 1e-6) {
         cout << "0 0\n";
-//        cout << begin_with << ' ';
-//        for (int i = 0; i < days; ++i) {
-//            cout << (bool)(best_skip_mask & (1 << i)) << ' ';
-//            if (best_skip_mask & (1 << i)) begin_with = 0;
-//            begin_with += add[i];
-//            cout << begin_with << ' ';
-//        }
-//        cout << '\n' << best_skip_loss << '\n';
     } else {
-        cout << "1 " << best_skip_loss - best_loss << '\n';
-//        for (int i = 0; i < days; ++i) {
-//            cout << (bool)(best_mask & (1 << i));
-//        }
-//        cout << '\n';
-//        for (int i = 0; i < days; ++i) {
-//            cout << (bool)(best_skip_mask & (1 << i));
-//        }
+        cout << "1 " << res - full_res << '\n';
     }
 }
