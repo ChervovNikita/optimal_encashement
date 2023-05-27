@@ -4,3 +4,4 @@ venv/
 .idea/
 src/floyd/cmake-build-debug
 *.ipynb_checkpoints/
+*__pycache__*
