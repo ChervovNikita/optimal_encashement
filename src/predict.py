@@ -19,11 +19,12 @@ def get_args_parser():
     parser.add_argument('--years', default="[2022]", type=str)
     parser.add_argument('--output_path', default="res.csv", type=str)
     parser.add_argument('--next_days', default=30, type=int)
+    parser.add_argument('--agg_path', default="zero_aggregation.pkl", type=str)
     return parser
 
 def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboost_zero.pkl', tid_path='tid_mean.pkl',
                   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-              'August', 'September', 'October', 'November', 'December'], years = [2022, 2023, 2024], output_path='data/processed/res.csv', next_days=30):
+              'August', 'September', 'October', 'November', 'December'], years = [2022, 2023, 2024], output_path='res.csv', next_days=30, agg_path='zero_aggregation.pkl'):
     
     def create_sales_lag_feats(df, gpby_cols, target_col, lags):
         gpby = df.groupby(gpby_cols)
@@ -152,8 +153,7 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
                                    alpha=[0.9, 0.7, 0.6], 
                                    shift=[3, 7, 14, 28])
     with open(tid_path, 'rb') as f:
-        tid_mean = pickle.load(f).rename(columns={'tid_mean_income':'income'})
-        # print(tid_mean)
+        tid_mean = pickle.load(f)
         data = data.merge(tid_mean, how='left')
         
     url = 'http://weatherarchive.ru/Temperature/Moscow/{month}-{year}'
@@ -163,7 +163,7 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
         stats[year] = {}
         for month in months:
             stats[year][month] = parse_url(url.format(month=month, year=year))
-
+    
     weather = []
     for i, (month, v) in enumerate(stats[2022].items()):
         i = i + 1
@@ -180,7 +180,9 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
     weather = pd.DataFrame(weather)
     weather['date'] = pd.to_datetime(weather['date'])
     data = data.merge(weather, on='date', how='left')
-        
+    with open(agg_path, 'rb') as f:
+        nw = pickle.load(f)
+    train = train.merge(nw, on='tid', how='left')
     with open(model_path, 'rb') as f:
         model = pickle.load(f)
     preds = [None for _ in range(len(data))]
@@ -241,8 +243,7 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
     res.to_csv(output_path, index=False)
     return res
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Image segmentation', parents=[get_args_parser()])
     args = parser.parse_args()
-    proccessing(args.data_path, args.model_path, args.tid_path, eval(args.months), eval(args.years), args.output_path, args.next_days)
+    proccessing(args.data_path, args.model_path, args.tid_path, eval(args.months), eval(args.years), args.output_path, args.next_days, args.agg_path)
