@@ -55,16 +55,17 @@ class VRPP:
             while not routing.IsEnd(i):
                 i = solution.Value(routing.NextVar(i))
                 norm_idx = manager.IndexToNode(i)
-                if norm_idx + 1 > 0 and norm_idx + 1 <= self.real_cnt:
-                    visited[self.toid[norm_idx + 1]] = 1
-                    path.append(self.toid[norm_idx + 1])
+                if norm_idx > 0 and norm_idx <= self.real_cnt:
+                    visited[self.toid[norm_idx]] = 1
+                    path.append(self.toid[norm_idx])
             paths.append(path)
 
-        path = paths[0]
-        sum_dist = 0
-        for i in range(len(path) - 1):
-            sum_dist += self.distance_matrix[path[i]][path[i + 1]]
-        print(sum_dist)
+        # path = paths[0]
+        # sum_dist = 0
+        # for i in range(len(path) - 1):
+        #     sum_dist += self.distance_matrix[path[i] + 1][path[i + 1] + 1]
+        # print(sum_dist)
+
         return visited, paths
 
     def get_distance_matrix(self):
@@ -140,6 +141,7 @@ class VRPP:
 
         self.real_cnt = sum(mask)
 
+        assert sum(mask) == len(mask)
         self.mask = mask
         tmp = [i for i in range(len(self.mask)) if self.mask[i]]
         self.toid = [*[-1], *[val for val in tmp], *[-2]]
