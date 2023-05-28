@@ -23,7 +23,7 @@ def get_args_parser():
 
 def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboost_zero.pkl', tid_path='tid_mean.pkl',
                   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-              'August', 'September', 'October', 'November', 'December'], years = [2022, 2023, 2024], output_path='res.csv', next_days=30):
+              'August', 'September', 'October', 'November', 'December'], years = [2022, 2023, 2024], output_path='data/processed/res.csv', next_days=30):
     
     def create_sales_lag_feats(df, gpby_cols, target_col, lags):
         gpby = df.groupby(gpby_cols)
@@ -152,7 +152,8 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
                                    alpha=[0.9, 0.7, 0.6], 
                                    shift=[3, 7, 14, 28])
     with open(tid_path, 'rb') as f:
-        tid_mean = pickle.load(f)
+        tid_mean = pickle.load(f).rename(columns={'tid_mean_income':'income'})
+        # print(tid_mean)
         data = data.merge(tid_mean, how='left')
         
     url = 'http://weatherarchive.ru/Temperature/Moscow/{month}-{year}'
@@ -239,6 +240,7 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
             
     res.to_csv(output_path, index=False)
     return res
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Image segmentation', parents=[get_args_parser()])
