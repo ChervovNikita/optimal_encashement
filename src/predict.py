@@ -14,7 +14,6 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Image segmentation', add_help=False)
     parser.add_argument('--data_path', default="terminal_data_hackathon v4.xlsx", type=str)
     parser.add_argument('--model_path', default="catboost_zero.pkl", type=str)
-    parser.add_argument('--tid_path', default="tid_mean.pkl", type=str)
     parser.add_argument('--months', default="['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']", type=str)
     parser.add_argument('--years', default="[2022]", type=str)
     parser.add_argument('--output_path', default="res.csv", type=str)
@@ -22,7 +21,7 @@ def get_args_parser():
     parser.add_argument('--agg_path', default="zero_aggregation.pkl", type=str)
     return parser
 
-def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboost_zero.pkl', tid_path='tid_mean.pkl',
+def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboost_zero.pkl',
                   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
               'August', 'September', 'October', 'November', 'December'], years = [2022, 2023, 2024], output_path='res.csv', next_days=30, agg_path='zero_aggregation.pkl'):
     
@@ -151,10 +150,7 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
                                    target_col='income', 
                                    alpha=[0.9, 0.7, 0.6], 
                                    shift=[3, 7, 14, 28])
-    
-    with open(tid_path, 'rb') as f:
-        tid_mean = pickle.load(f)
-        data = data.merge(tid_mean, how='left')
+   
     with open(agg_path, 'rb') as f:
         nw = pickle.load(f)
         data = data.merge(nw, on='tid', how='left')
@@ -226,7 +222,7 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
             if msk[j] == 1:
                 data['income'].iloc[j] = 0
             else:
-                data['income'].iloc[j] = tid_mean['income'].iloc[j//(len(data)//1630)]
+                data['income'].iloc[j] = nw['tid_mean_income'].iloc[j//(len(data)//1630)]
     preds = data['income']
     
     a = defaultdict(str)
@@ -244,6 +240,6 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
     return res
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser('Image segmentation', parents=[get_args_parser()])
+    parser = argparse.ArgumentParser('incomes_solver', parents=[get_args_parser()])
     args = parser.parse_args()
-    proccessing(args.data_path, args.model_path, args.tid_path, eval(args.months), eval(args.years), args.output_path, args.next_days, args.agg_path)
+    proccessing(args.data_path, args.model_path, eval(args.months), eval(args.years), args.output_path, args.next_days, args.agg_path)
