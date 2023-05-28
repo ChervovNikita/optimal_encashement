@@ -1,5 +1,4 @@
 *.csv
-*.xlsx
 venv/
 .idea/
 src/floyd/cmake-build-debug
