@@ -31,10 +31,10 @@ config = {'num_terminals': 1630,
 
 class MainPredictor:
     def __init__(self, dist_path, incomes_path, predictor_path, tid_path):
-        # self.predicted_data = predict.proccessing(incomes_path, predictor_path, tid_path).to_numpy()[:, 1:]
+        self.predicted_data = predict.proccessing(incomes_path, predictor_path, tid_path).to_numpy()[:, 1:]
         self.real_data = pd.read_excel(incomes_path, 'Incomes')
         self.real_data = self.real_data[self.real_data.columns[1:]].values.copy()
-        self.predicted_data = self.real_data.copy()  # CHAAAAAAAAAAANGE THIS
+        # self.predicted_data = self.real_data.copy()  # CHAAAAAAAAAAANGE THIS
 
         dist = pd.read_csv(dist_path)
         le = preprocessing.LabelEncoder()
