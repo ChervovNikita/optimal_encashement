@@ -1,13 +1,16 @@
 import os
+import random
 
 # dirname = os.path.dirname(os.path.abspath(__file__))
 
 code_path = 'src/optimal_mask/main.cpp'
 script_path = 'src/cpp_mask'
-buffer = 'data/processed/buffer'
+buffer_origin = 'data/processed/buffer'
 
 
 def find_optimal(day, wait, adds):
+    additional = random.randint(0, 100000000000)
+    buffer = buffer_origin + str(additional)
     with open(buffer + '_in', 'w') as f:
         f.write(f'{day} {wait}\n{" ".join([str(add) for add in adds])}\n')
     with open(buffer + "_out", 'w') as f:
