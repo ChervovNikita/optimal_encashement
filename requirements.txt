@@ -1,0 +1,10 @@
+beautifulsoup4==4.11.1
+catboost==1.1.1
+holidays==0.25
+numpy==1.23.5
+optuna==3.1.1
+ortools==9.6.2534
+pandas==1.5.2
+Requests==2.31.0
+scikit_learn==1.2.2
+tqdm==4.64.1
