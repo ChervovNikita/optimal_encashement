@@ -7,6 +7,14 @@
 # Запуск решения
 Для того, чтобы запустить данное решение вам необходимо:
 1) Установить зависимости из requirements.txt
+2) Скачать данные
+3) Запустить следующий скрипт
+```console
+python3 src/main.py --dist_path "data/raw/times v4.csv" --incomes_path "data/raw/terminal_data_hackathon v4.xlsx" --model_path "models/catboost_zero.pkl" --zero_aggregation_path="models/zero_aggregation.pkl" --output_path "data/processed/raw_report.json"
+```
+Чтобы он отработал данные должны лежать в папке data/raw, а запускаться нужно из корня проекта
+
+Этот скрипт выдаст .json файл с информацией о каждом дне
 
 # Описание работы решения
 
