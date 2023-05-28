@@ -1,10 +1,10 @@
 import os
 
-dirname = os.path.dirname(os.path.abspath(__file__))
+# dirname = os.path.dirname(os.path.abspath(__file__))
 
-code_path = os.path.join(dirname, 'optimal_mask/masks.cpp')
-script_path = os.path.join(dirname, 'optimal_mask/cpp_mask')
-buffer = os.path.join(dirname, '../data/processed/buffer')
+code_path = 'src/optimal_mask/main.cpp'
+script_path = 'src/cpp_mask'
+buffer = 'data/processed/buffer'
 
 
 def find_optimal(day, wait, adds):
@@ -16,8 +16,8 @@ def find_optimal(day, wait, adds):
         print('Build script')
         os.system(f'g++ {code_path} -o {script_path}')
     os.system(f'{script_path} < {buffer + "_in"} > {buffer + "_out"}')
-    status, delta = [float(val) for val in open(buffer + "_out", 'r').readline().strip().split(' ')]
-    return int(status), delta
+    delta = int(open(buffer + "_out", 'r').readline().strip())
+    return delta
 
 
 if __name__ == '__main__':
