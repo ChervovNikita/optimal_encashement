@@ -128,7 +128,72 @@ class MainPredictor:
             for path in paths:
                 day_log['paths'].append(path)
             data['logs'].append(day_log)
-        json.dump(data, open(results_path, 'w'), indent=4)
+        # json.dump(data, open(results_path, 'w'), indent=4)
+        report = data    
+        incomes = pd.read_excel('terminal_data_hackathon v4.xlsx', 'Incomes')
+        rep_df = incomes.drop('остаток на 31.08.2022 (входящий)', axis=1)
+        rep_df[rep_df.columns[1]] = incomes['остаток на 31.08.2022 (входящий)']
+        for i in range(len(report['logs'])):
+            q = report['logs'][i]['visited']
+            for j in range(len(q)):
+                if q[j]:
+                    rep_df[rep_df.columns[i+1]].iloc[j] = 0
+            if i == len(report['logs'])-1:
+                continue
+            rep_df[rep_df.columns[i+2]] += rep_df[rep_df.columns[i+1]]
+
+        fond_df = rep_df.copy()
+        inc_df = rep_df.copy()
+        for cl in fond_df.columns[1:]:
+            for i in range(len(fond_df)):
+                fond_df[cl].iloc[i] *= 0.02 / 365
+                if rep_df[cl].iloc[i] == 0:
+                    inc_df[cl].iloc[i] = max(100, inc_df[cl].iloc[i] * 0.0001)
+                else:
+                    inc_df[cl].iloc[i] = 0
+        cols = ['статья расходов'] + [str(x) for x in pd.date_range("2022-09-01", periods=91, freq="D")]
+        agg_df = pd.DataFrame(columns = cols)
+        agg_df.loc[0] = ['фондирование'] + fond_df.drop("TID", axis=1).sum().tolist()
+        agg_df.loc[1] = ['инкассация'] + inc_df.drop("TID", axis=1).sum().tolist()
+        agg_df.loc[2] = ['стоимость броневиков'] + [100000 for _ in range(91)]
+        agg_df.loc[3] = ['итого'] + (fond_df.drop("TID", axis=1).sum() + inc_df.drop("TID", axis=1).sum() + 100000).tolist()
+        q = pd.read_csv('times v4.csv')
+        terms = pd.read_excel('terminal_data_hackathon v4.xlsx')['TID'].tolist()
+        enc = {x: i for i,x in enumerate(terms)}
+        t = [[0 for j in range(1630)] for i in range(1630)]
+        for i in tqdm(range(len(q))):
+            t[enc[q['Origin_tid'].iloc[i]]][enc[q['Destination_tid'].iloc[i]]] = q['Total_Time'].iloc[i]
+        path_df = pd.DataFrame(columns = ['порядкой номер броневика','устройство', 'дата-время прибытия', 'дата-время отъезда'])
+        dates = pd.date_range("2022-09-01", periods=len(report['logs']), freq="D")
+        sm = 0
+        for i in tqdm(range(len(report['logs']))):
+            q = report['logs'][0]['paths']
+            for j in range(len(q)):
+                cur_time = dates[i]+pd.Timedelta(hours=9)
+                for k, w in enumerate(q[j]):
+                    cur_row = ['', terms[w], str(cur_time), '']
+                    cur_time += pd.Timedelta(seconds=600)
+                    if k == 0:
+                        cur_row[0] = '1'
+                    if k != len(q[j])-1:
+                        cur_row[-1] = str(cur_time)
+                        cur_time += pd.Timedelta(minutes=round(t[ q[j][k] ][ q[j][k+1] ]))
+                        sm += t[ q[j][k] ][ q[j][k+1] ]
+                    path_df.loc[len(path_df)] = cur_row
+            path_df.loc[len(path_df)] = ['', '', '', '']
+        text = pd.Series(['Лист "остатки на конец дня" показывает сумму остатков в устройствах в разрезе дат на конец дня. Т.е. в случае, если устройство было инкассировано, в ячейке точно должен быть 0',
+                         'Лист "стоимость фондирования" показывает суммы, которые получаются начислением процента на неинкассированные остатки в устройствах каждый день. В случае, если устройство не было инкассировано, банк платит процент за использование денег. ',
+                         'Лист "стоимость инкасации" показывает стоимости за процедуру изымания денег из устройства на дату. Т.е. если устройство было обслужено, то услуга была оплачена.',
+                         'Лист "маршруты" содержит информарцию об объездах каждого броневика точек, которые инкассируются в разрезе всего временого периода. Фиксируется время прибытия к устройству и время уезда от него.',
+                         'Лист "итог" формирует суммарные издержки банка по дням (для простоты приведены формулы расчёта некоторых ячеек)'])
+        writer = pd.ExcelWriter(results_path, engine = 'xlsxwriter')
+        text.to_excel(writer, sheet_name = 'пояснения по отчёту')
+        rep_df.to_excel(writer, sheet_name = 'остатки на конец дня')
+        fond_df.to_excel(writer, sheet_name = 'стоимость фондирования')
+        inc_df.to_excel(writer, sheet_name = 'стоимость инкассирования')
+        path_df.to_excel(writer, sheet_name = 'маршруты')
+        agg_df.to_excel(writer, sheet_name = 'итог')
+        writer.close()
 
 
 if __name__ == '__main__':
