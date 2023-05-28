@@ -36,7 +36,8 @@ class MainPredictor:
         self.real_data = pd.read_excel(incomes_path, 'Incomes')
         self.real_data = self.real_data[self.real_data.columns[1:]].values.copy()
         # self.predicted_data = self.real_data.copy()  # CHAAAAAAAAAAANGE THIS
-
+        self.dist_path = dist_path
+        self.incomes_path = incomes_path
         dist = pd.read_csv(dist_path)
         le = preprocessing.LabelEncoder()
         le.fit(dist['Origin_tid'])
@@ -130,7 +131,7 @@ class MainPredictor:
             data['logs'].append(day_log)
         # json.dump(data, open(results_path, 'w'), indent=4)
         report = data    
-        incomes = pd.read_excel('terminal_data_hackathon v4.xlsx', 'Incomes')
+        incomes = pd.read_excel(self.incomes_path, 'Incomes')
         rep_df = incomes.drop('остаток на 31.08.2022 (входящий)', axis=1)
         rep_df[rep_df.columns[1]] = incomes['остаток на 31.08.2022 (входящий)']
         for i in range(len(report['logs'])):
@@ -157,7 +158,7 @@ class MainPredictor:
         agg_df.loc[1] = ['инкассация'] + inc_df.drop("TID", axis=1).sum().tolist()
         agg_df.loc[2] = ['стоимость броневиков'] + [100000 for _ in range(91)]
         agg_df.loc[3] = ['итого'] + (fond_df.drop("TID", axis=1).sum() + inc_df.drop("TID", axis=1).sum() + 100000).tolist()
-        q = pd.read_csv('times v4.csv')
+        q = pd.read_csv(self.dist_path)
         terms = pd.read_excel('terminal_data_hackathon v4.xlsx')['TID'].tolist()
         enc = {x: i for i,x in enumerate(terms)}
         t = [[0 for j in range(1630)] for i in range(1630)]
