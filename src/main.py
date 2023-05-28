@@ -31,8 +31,8 @@ config = {'num_terminals': 1630,
 }
 
 class MainPredictor:
-    def __init__(self, dist_path, incomes_path, predictor_path, tid_path):
-        self.predicted_data = predict.proccessing(incomes_path, predictor_path, tid_path).to_numpy()[:, 1:]
+    def __init__(self, dist_path, incomes_path, predictor_path, zero_aggregation_path):
+        self.predicted_data = predict.proccessing(incomes_path, predictor_path, agg_path=zero_aggregation_path).to_numpy()[:, 1:]
         self.real_data = pd.read_excel(incomes_path, 'Incomes')
         self.real_data = self.real_data[self.real_data.columns[1:]].values.copy()
         # self.predicted_data = self.real_data.copy()  # CHAAAAAAAAAAANGE THIS
@@ -136,12 +136,12 @@ if __name__ == '__main__':
     parser.add_argument('--dist_path', default="data/raw/times v4.csv", type=str)
     parser.add_argument('--incomes_path', default="data/raw/terminal_data_hackathon v4.xlsx", type=str)
     parser.add_argument('--model_path', default="models/catboost_zero.pkl", type=str)
-    parser.add_argument('--tid_path', default="models/tid_mean.pkl", type=str)
+    parser.add_argument('--zero_aggregation_path', default="models/zero_aggregation.pkl", type=str)
     parser.add_argument('--output_path', default="data/processed/raw_report.json", type=str)
 
     args = parser.parse_args()
 
-    predictor = MainPredictor(args.dist_path, args.incomes_path, args.model_path, args.tid_path)
+    predictor = MainPredictor(args.dist_path, args.incomes_path, args.model_path, args.zero_aggregation_path)
     day_losses, day_visited, day_paths = predictor.simulate()
     # for i, (loss, visited, paths) in enumerate(zip(day_losses, day_visited, day_paths)):
     #     print("=" * 50, f"DAY {i}")
