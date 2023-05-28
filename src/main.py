@@ -10,6 +10,7 @@ importlib.reload(optimal_mask)
 import warnings
 import json
 import argparse
+import tqdm
 
 warnings.simplefilter('ignore')
 

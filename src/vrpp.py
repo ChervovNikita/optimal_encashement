@@ -53,9 +53,10 @@ class VRPP:
             i = routing.Start(vehicle)
             while not routing.IsEnd(i):
                 i = solution.Value(routing.NextVar(i))
-                if i > 0 and i <= self.real_cnt:
-                    visited[self.toid[i]] = 1
-                    path.append(self.toid[i])
+                norm_idx = manager.IndexToNode(i)
+                if norm_idx > 0 and norm_idx <= self.real_cnt:
+                    visited[self.toid[norm_idx]] = 1
+                    path.append(self.toid[norm_idx])
             paths.append(path)
         return visited, paths
 
