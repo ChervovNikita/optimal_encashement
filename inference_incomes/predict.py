@@ -18,11 +18,12 @@ def get_args_parser():
     parser.add_argument('--months', default="['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']", type=str)
     parser.add_argument('--years', default="[2022]", type=str)
     parser.add_argument('--output_path', default="res.csv", type=str)
+    parser.add_argument('--next_days', default=30, type=int)
     return parser
 
 def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboost.pkl', tid_path='tid_mean.pkl',
                   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-              'August', 'September', 'October', 'November', 'December'], years = [2022], output_path='res.csv'):
+              'August', 'September', 'October', 'November', 'December'], years = [2022, 2023, 2024], output_path='res.csv', next_days=30):
     
     def create_sales_lag_feats(df, gpby_cols, target_col, lags):
         gpby = df.groupby(gpby_cols)
@@ -100,6 +101,9 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
                 return parse_table(table)
     
     data = pd.read_excel(data_path, 'Incomes')
+    dti = [str(x) for x in pd.date_range(data.columns[-1][:10], periods=next_days, freq="D")]
+    for x in dti[1:]:
+        data[x] = [0 for _ in range(len(data))]
     terms = pd.read_excel(data_path)
     df_unpivot = pd.melt(data, id_vars='TID', value_vars=data.columns[2:])
     data = df_unpivot.sort_values(by=['TID', 'variable'])
@@ -161,7 +165,6 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
         
     with open(model_path, 'rb') as f:
         model = pickle.load(f)
-    res = pd.read_excel(data_path, 'Incomes')
     
     preds = [None for _ in range(len(data))]
     for i in range(len(data)//1630):
@@ -189,7 +192,10 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
     a = defaultdict(str)
     for i in range(len(data)):
         a[f"{data['tid'].iloc[i]}-{data['date'].iloc[i]}"] = preds[i]
-    
+    res = pd.read_excel(data_path, 'Incomes')
+    dti = [str(x) for x in pd.date_range(res.columns[-1][:10], periods=next_days, freq="D")]
+    for x in dti[1:]:
+        res[x] = [0 for _ in range(len(res))]
     for dt in res.columns[2:]:
         for i in range(len(res)):
             res[dt].iloc[i] = a[f"{res['TID'].iloc[i]}-{dt}"]
@@ -200,4 +206,4 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Image segmentation', parents=[get_args_parser()])
     args = parser.parse_args()
-    proccessing(args.data_path, args.model_path, args.tid_path, eval(args.months), eval(args.years), args.output_path)
+    proccessing(args.data_path, args.model_path, args.tid_path, eval(args.months), eval(args.years), args.output_path, args.next_days)
