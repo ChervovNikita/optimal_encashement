@@ -118,10 +118,10 @@ class MainPredictor:
 
 
 if __name__ == '__main__':
-    predictor = MainPredictor('../data/times v4.csv',
-                              '../data/terminal_data_hackathon v4.xlsx',
-                              '../inference_incomes/catboost.pkl',
-                              '../inference_incomes/tid_mean.pkl')
+    predictor = MainPredictor('data/times v4.csv',
+                              'data/terminal_data_hackathon v4.xlsx',
+                              'inference_incomes/catboost.pkl',
+                              'inference_incomes/tid_mean.pkl')
     day_losses, day_visited, day_paths = predictor.simulate()
     for i, (loss, visited, paths) in enumerate(zip(day_losses, day_visited, day_paths)):
         print("=" * 50, f"DAY {i}")
@@ -129,5 +129,7 @@ if __name__ == '__main__':
         print(visited)
         for path in paths:
             print(path)
+
+
 
 
