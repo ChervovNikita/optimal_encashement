@@ -13,7 +13,7 @@ from collections import defaultdict
 def get_args_parser():
     parser = argparse.ArgumentParser('Image segmentation', add_help=False)
     parser.add_argument('--data_path', default="terminal_data_hackathon v4.xlsx", type=str)
-    parser.add_argument('--model_path', default="catboost.pkl", type=str)
+    parser.add_argument('--model_path', default="catboost_zero.pkl", type=str)
     parser.add_argument('--tid_path', default="tid_mean.pkl", type=str)
     parser.add_argument('--months', default="['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']", type=str)
     parser.add_argument('--years', default="[2022]", type=str)
@@ -21,7 +21,7 @@ def get_args_parser():
     parser.add_argument('--next_days', default=30, type=int)
     return parser
 
-def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboost.pkl', tid_path='tid_mean.pkl',
+def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboost_zero.pkl', tid_path='tid_mean.pkl',
                   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
               'August', 'September', 'October', 'November', 'December'], years = [2022, 2023, 2024], output_path='res.csv', next_days=30):
     
@@ -118,7 +118,7 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
     data['is_month_end'] = (data.date.dt.is_month_end).astype(int)
     
     data['income'] = 0
-    
+    data['target'] = 0
     data = create_sales_lag_feats(data, gpby_cols=['tid'], target_col='income', 
                                lags=[1, 7, 14, 28])
 
@@ -132,6 +132,23 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
 
     data = create_sales_ewm_feats(data, gpby_cols=['tid'], 
                                    target_col='income', 
+                                   alpha=[0.9, 0.7, 0.6], 
+                                   shift=[3, 7, 14, 28])
+    
+    
+    data = create_sales_lag_feats(data, gpby_cols=['tid'], target_col='target', 
+                               lags=[1, 7, 14, 28])
+
+    data = create_sales_rmean_feats(data, gpby_cols=['tid'], 
+                                     target_col='target', windows=[1, 3, 7, 14, 28], 
+                                     min_periods=1, win_type='triang')
+
+    data = create_sales_rmed_feats(data, gpby_cols=['tid'], 
+                                     target_col='target', windows=[2, 3, 7, 14, 28], 
+                                     min_periods=2, win_type=None)
+
+    data = create_sales_ewm_feats(data, gpby_cols=['tid'], 
+                                   target_col='target', 
                                    alpha=[0.9, 0.7, 0.6], 
                                    shift=[3, 7, 14, 28])
     with open(tid_path, 'rb') as f:
@@ -165,7 +182,6 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
         
     with open(model_path, 'rb') as f:
         model = pickle.load(f)
-    
     preds = [None for _ in range(len(data))]
     for i in range(len(data)//1630):
         data = create_sales_lag_feats(data, gpby_cols=['tid'], target_col='income', 
@@ -183,12 +199,33 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
                                        target_col='income', 
                                        alpha=[0.9, 0.7, 0.6], 
                                        shift=[3, 7, 14, 28])
+        
+        data = create_sales_lag_feats(data, gpby_cols=['tid'], target_col='target', 
+                               lags=[1, 7, 14, 28])
+
+        data = create_sales_rmean_feats(data, gpby_cols=['tid'], 
+                                         target_col='target', windows=[1, 3, 7, 14, 28], 
+                                         min_periods=1, win_type='triang')
+
+        data = create_sales_rmed_feats(data, gpby_cols=['tid'], 
+                                         target_col='target', windows=[2, 3, 7, 14, 28], 
+                                         min_periods=2, win_type=None)
+
+        data = create_sales_ewm_feats(data, gpby_cols=['tid'], 
+                                       target_col='target', 
+                                       alpha=[0.9, 0.7, 0.6], 
+                                       shift=[3, 7, 14, 28])
     
-        msk = model.predict(data)
+        msk = model.predict_proba(data)[:, 1]>0.381
         for j in range(i, len(data), len(data)//1630):
             preds[j] = msk[j]
-            data['income'].iloc[j] = msk[j]
-
+            data['target'].iloc[j] = msk[j]
+            if msk[j] == 1:
+                data['income'].iloc[j] = 0
+            else:
+                data['income'].iloc[j] = tid_mean['income'].iloc[j//(len(data)//1630)]
+    preds = data['income']
+    
     a = defaultdict(str)
     for i in range(len(data)):
         a[f"{data['tid'].iloc[i]}-{data['date'].iloc[i]}"] = preds[i]
