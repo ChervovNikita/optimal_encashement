@@ -7,16 +7,28 @@
 # Запуск решения
 Для того, чтобы запустить данное решение вам необходимо:
 1) Установить зависимости из requirements.txt
-2) Скачать данные
+2) Скачать данные и положить их в data/raw
 3) Запустить следующий скрипт
 ```console
-python3 src/main.py --dist_path "data/raw/times v4.csv" --incomes_path "data/raw/terminal_data_hackathon v4.xlsx" --model_path "models/catboost_zero.pkl" --zero_aggregation_path="models/zero_aggregation.pkl" --output_path "data/processed/raw_report.json"
+python3 src/main.py --dist_path "data/raw/times v4.csv" --incomes_path "data/raw/terminal_data_hackathon v4.xlsx"
+                    --model_path "models/catboost_zero.pkl" --zero_aggregation_path="models/zero_aggregation.pkl"
+                    --output_path "data/processed/raw_report.json"
 ```
 Чтобы он отработал данные должны лежать в папке data/raw, а запускаться нужно из корня проекта
 
 Этот скрипт выдаст .json файл с информацией о каждом дне
 
+4) Теперь, чтобы сгенерировать отчет необходимо выполнить следующую команду:
+```console
+python3 src/report.py --report_json=data/processed/raw_report.json --income_path="data/raw/terminal_data_hackathon v4.xlsx"
+                      --times_path="data/raw/times v4.csv" --output_path="data/processed/report.xlsx"
+```
+
+Файл, расположенный по путю output_path будет содержать отчет
+
 # Описание работы решения
+
+Главный файл: [main.py](https://github.com/ChervovNikita/optimal_encashement/blob/master/src/main.py)
 
 Наше решение можно разбить на несколько ключевых частей:
 1) Предсказание притока наличности в терминалах.
@@ -32,6 +44,8 @@ python3 src/main.py --dist_path "data/raw/times v4.csv" --incomes_path "data/raw
 
 
 ## Предсказание притока наличности в терминалах
+
+Подробнее: [income_experiments.ipynb](https://github.com/ChervovNikita/optimal_encashement/blob/master/notebooks/income_experiments.ipynb), [predict.py](https://github.com/ChervovNikita/optimal_encashement/blob/master/src/predict.py)
 
 Посмотрев на данные, мы увидели, что основную проблему для предсказания составляют нулевый притоки наличности. То есть когда терминал был на ремонте или еще почему-то не мог принимать наличность. В остальные дни очень хорошо себя показывает просто брать среднее значение данного терминала.
 
@@ -56,7 +70,7 @@ python3 src/main.py --dist_path "data/raw/times v4.csv" --incomes_path "data/raw
 
 Предсказание нулей: `Accuracy - 0.95, Precision - 0.80, Recall - 0.28`
 
-Предсказание притока: `MAE - 12400, SMAPE - 0.27`
+Предсказание притока: `MAE - 12400, MAPE - 0.24`
 
 ## Определение штрафа на каждый день
 
@@ -77,13 +91,16 @@ python3 src/main.py --dist_path "data/raw/times v4.csv" --incomes_path "data/raw
 Примечания: чтобы учитывать delta_loss и soon_deadline_loss с разной силой мы домножаем второй из них на config['inverse_delta_loss']
 
 **Подсчет delta_loss** 
+
 <img width="983" alt="image" src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/00822a8c-7257-4efa-b304-fdf12e991d51">
 
 Мы знаем, что для любой терминал нам нужно инкасировать хотя бы раз в две недели и как только он переполнился. Получается, если мы знаем, что за k дней нам точно нужно провести один раз инкасаци мы можем определить в какой день это сделать лучше всего. Для этого нужно просто перебрать день инкасации и посчитать потери. Они будут равны тому сколько денег мы потеряем до момента инкасации и со дня инкасации до конца. 
 
 Отлично, мы знаем сколько заплатим, если за i-ый терминал, если будем инкасировать в день d и в день d + 1. Теперь `delta_loss = loss[d + 1] - loss[d]` - солько денег мы потеряем или получим, если вместо того, чтобы инкасировать терминал сегодня сделаем это завтра. И этот штраф добавляется к основному с некоторым коэфицентов.
 
-**Оптимизация при помощи динамического программирования** 
+**Оптимизация при помощи динамического программирования**
+
+Подробнее: [optimal_mask.py](https://github.com/ChervovNikita/optimal_encashement/blob/master/src/optimal_mask.py), [main.cpp](https://github.com/ChervovNikita/optimal_encashement/blob/master/src/optimal_mask/main.cpp)
 
 На самом деле, лосс, который считается выше не самый оптимальный, так как он живет в мире, где есть всего одна инкасация. Для того, чтобы смаштабировать это решение на несколько возможных инкасаций мы можем прибегнуть к динамическому программирования. То есть для каждого дня будет считаться наименьший штраф, который можно будет получить в будущем на этом терминале, если мы сегодня его объедем (с учетом того, в какие дни мы объехали его ранее). И delta_loss считается тоже как разница `loss[d + 1]` и `loss[d]`
 
@@ -92,6 +109,8 @@ python3 src/main.py --dist_path "data/raw/times v4.csv" --incomes_path "data/raw
 Примечание: здесь num_days - горизонт планирования (условно 30-90 дней), а days_limit - это как часто нужно обязательно объезжать каждый терминал (в нашем случае это 14 дней).
 
 ## Поиск оптимального маршрута
+
+Подробнее: [vrpp.py](https://github.com/ChervovNikita/optimal_encashement/blob/master/src/vrpp.py)
 
 После того, как мы назначили штрафы за то, что сегодня не посетили тот или иной терминал, нам необходимо объехать их всех так, чтобы суммарный штраф по тем терминалам, которые мы не успели объехать был минимален. 
 
@@ -104,8 +123,8 @@ python3 src/main.py --dist_path "data/raw/times v4.csv" --incomes_path "data/raw
 
 Ниже представлены финальные метрики, посчитанные на всем выданном нам промежутке (3 месяца):
 
-1) Суммарная стоимость фондирования = ...
-2) Суммарная стоимость инкасации терминалов = ...
+1) Суммарная стоимость фондирования = 2.3М
+2) Суммарная стоимость инкассации терминалов = 1.3М
 3) Кол-во используемых броневиков = 5
 4) Стоимость аренды броневиков на все дни = 9.1М
-5) Общие расходы = 12.67М
+5) Общие расходы = 12.7М

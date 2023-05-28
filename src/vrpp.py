@@ -74,6 +74,8 @@ class VRPP:
         for i, j, w in zip(self.dist['from_int'], self.dist['to_int'], self.dist['Total_Time']):
             distance_matrix[i + 1, j + 1] = w + self.service_time
 
+        # print(distance_matrix[:5, :5])
+
         for i in range(1, cnt_terminals + 1):
             distance_matrix[i, 0] = INF
             distance_matrix[0, i] = self.service_time
