@@ -22,6 +22,7 @@
 <img width="997" alt="image" src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/a5d966ae-1a1a-44d2-ac95-cadff2ea28ee">
 
 В итоге мы построили отдельную модель, которая предсказывает поломки (и соответственно нулевые поступления), а если предсказывается, что все хорошо, то берем среднее значение прироста по данному терминалу.
+
 <img width="720" alt="image" src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/5aa0c4c4-f2be-4604-8c80-3d1bade3ef11">
 
 **Признаки, использованные для предсказания нулей:**
