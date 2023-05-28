@@ -47,7 +47,7 @@ signed main() {
         pref[i] += pref[i - 1];
     }
 
-    vector<vector<double>> dp(days, vector<double>(2, INF));
+    vector<vector<double> > dp(days, vector<double>(2, INF));
     dp[0][1] = loss(adds[0], true);
     for (int i = 1; i < days; ++i) {
 //        if (i <= max_wait) {
@@ -61,7 +61,7 @@ signed main() {
     }
     double take_res = min(dp[days - 1][0], dp[days - 1][1]);
 
-    dp = vector<vector<double>>(days, vector<double>(2, INF));
+    dp = vector<vector<double> >(days, vector<double>(2, INF));
     dp[0][0] = loss(adds[0], false);
     for (int i = 1; i < days; ++i) {
         if (i <= max_wait) {

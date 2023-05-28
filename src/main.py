@@ -2,9 +2,11 @@ import pandas as pd
 from sklearn import preprocessing
 import vrpp
 import predict
+import optimal_mask
 import importlib
 importlib.reload(vrpp)
 importlib.reload(predict)
+importlib.reload(optimal_mask)
 import warnings
 import json
 import argparse
@@ -25,6 +27,7 @@ config = {'num_terminals': 1630,
           'left_days_coef': 0,
           'encashment_coef': 0,
           'num_vehicles': 5,
+          'inverse_delta_loss': 300
 }
 
 class MainPredictor:
@@ -43,9 +46,10 @@ class MainPredictor:
 
         self.vrp = vrpp.VRPP(dist, 10, 10 * 60, config['num_vehicles'], solution_limit=100, time_limit=100, dead_loss=False)
 
-    def get_cost(self, days_left):
-        if days_left == 0: return INF
-        return 2 ** (config['max_not_service_days'] - days_left)
+    def get_cost(self, days_left, delta_loss):
+        if days_left == 0:
+            return INF
+        return 2 ** (config['max_not_service_days'] - days_left) * config['inverse_delta_loss'] + delta_loss
 
     def simulate(self):
         days = self.real_data.shape[1]
@@ -81,7 +85,12 @@ class MainPredictor:
 
                 to_counter[force_for_show] += 1
                 mask.append(1)
-                cost.append(int(self.get_cost(force)))
+
+                adds = [cur_cash]
+                for forecast in range(30):
+                    adds.append(self.predicted_data[i, day + forecast])
+
+                cost.append(int(self.get_cost(force, optimal_mask.find_optimal(len(adds), time_until_force[i], adds))))
 
             print(to_counter)
             visited, paths = self.vrp.find_vrp(cost, mask)
