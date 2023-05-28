@@ -113,6 +113,8 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
     data['is_month_start'] = (data.date.dt.is_month_start).astype(int)
     data['is_month_end'] = (data.date.dt.is_month_end).astype(int)
     
+    data['income'] = 0
+    
     data = create_sales_lag_feats(data, gpby_cols=['tid'], target_col='income', 
                                lags=[1, 7, 14, 28])
 
@@ -156,13 +158,34 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
     weather = pd.DataFrame(weather)
     weather['date'] = pd.to_datetime(weather['date'])
     data = data.merge(weather, on='date', how='left')
-    if 'income' in data:
-        data = data.drop('income', axis=1)
         
     with open(model_path, 'rb') as f:
         model = pickle.load(f)
     res = pd.read_excel(data_path, 'Incomes')
-    preds = model.predict(data)
+    
+    preds = [None for _ in range(len(data))]
+    for i in range(len(data)//1630):
+        data = create_sales_lag_feats(data, gpby_cols=['tid'], target_col='income', 
+                               lags=[1, 7, 14, 28])
+
+        data = create_sales_rmean_feats(data, gpby_cols=['tid'], 
+                                         target_col='income', windows=[1, 3, 7, 14, 28], 
+                                         min_periods=1, win_type='triang')
+
+        data = create_sales_rmed_feats(data, gpby_cols=['tid'], 
+                                         target_col='income', windows=[2, 3, 7, 14, 28], 
+                                         min_periods=2, win_type=None)
+
+        data = create_sales_ewm_feats(data, gpby_cols=['tid'], 
+                                       target_col='income', 
+                                       alpha=[0.9, 0.7, 0.6], 
+                                       shift=[3, 7, 14, 28])
+    
+        msk = model.predict(data)
+        for j in range(i, len(data), len(data)//1630):
+            preds[j] = msk[j]
+            data['income'].iloc[j] = msk[j]
+
     a = defaultdict(str)
     for i in range(len(data)):
         a[f"{data['tid'].iloc[i]}-{data['date'].iloc[i]}"] = preds[i]
@@ -172,6 +195,7 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
             res[dt].iloc[i] = a[f"{res['TID'].iloc[i]}-{dt}"]
             
     res.to_csv(output_path, index=False)
+    return res
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Image segmentation', parents=[get_args_parser()])
