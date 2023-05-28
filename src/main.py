@@ -160,7 +160,7 @@ class MainPredictor:
         agg_df.loc[2] = ['стоимость броневиков'] + [100000 for _ in range(91)]
         agg_df.loc[3] = ['итого'] + (fond_df.drop("TID", axis=1).sum() + inc_df.drop("TID", axis=1).sum() + 100000).tolist()
         q = pd.read_csv(self.dist_path)
-        terms = pd.read_excel('terminal_data_hackathon v4.xlsx')['TID'].tolist()
+        terms = pd.read_excel(self.incomes_path)['TID'].tolist()
         enc = {x: i for i,x in enumerate(terms)}
         t = [[0 for j in range(1630)] for i in range(1630)]
         for i in tqdm(range(len(q))):
