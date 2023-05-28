@@ -24,6 +24,7 @@ class VRPP:
         self.solution_limit = solution_limit
         self.time_limit = time_limit
         self.dead_loss = dead_loss
+        self.distance_matrix = None
 
     def print_solution(self, data, manager, routing, solution):
         """Prints solution on console."""
@@ -54,10 +55,16 @@ class VRPP:
             while not routing.IsEnd(i):
                 i = solution.Value(routing.NextVar(i))
                 norm_idx = manager.IndexToNode(i)
-                if norm_idx > 0 and norm_idx <= self.real_cnt:
-                    visited[self.toid[norm_idx]] = 1
-                    path.append(self.toid[norm_idx])
+                if norm_idx + 1 > 0 and norm_idx + 1 <= self.real_cnt:
+                    visited[self.toid[norm_idx + 1]] = 1
+                    path.append(self.toid[norm_idx + 1])
             paths.append(path)
+
+        path = paths[0]
+        sum_dist = 0
+        for i in range(len(path) - 1):
+            sum_dist += self.distance_matrix[path[i]][path[i + 1]]
+        print(sum_dist)
         return visited, paths
 
     def get_distance_matrix(self):
@@ -145,6 +152,8 @@ class VRPP:
             cost = deepcopy(r_cost)
         cost = [max(0, c) for c in cost]
         distance_matrix = self.get_distance_matrix()
+
+        self.distance_matrix = distance_matrix
 
         # print(distance_matrix[:10, :10])
 

@@ -31,12 +31,13 @@ config = {'num_terminals': 1630,
           'inverse_delta_loss': 300
 }
 
+
 class MainPredictor:
     def __init__(self, dist_path, incomes_path, predictor_path, zero_aggregation_path):
-        self.predicted_data = predict.proccessing(incomes_path, predictor_path, agg_path=zero_aggregation_path).to_numpy()[:, 1:]
+        # self.predicted_data = predict.proccessing(incomes_path, predictor_path, agg_path=zero_aggregation_path).to_numpy()[:, 1:]
         self.real_data = pd.read_excel(incomes_path, 'Incomes')
         self.real_data = self.real_data[self.real_data.columns[1:]].values.copy()
-        # self.predicted_data = self.real_data.copy()  # CHAAAAAAAAAAANGE THIS
+        self.predicted_data = self.real_data.copy()  # CHAAAAAAAAAAANGE THIS
         self.dist_path = dist_path
         self.incomes_path = incomes_path
         dist = pd.read_csv(dist_path)
@@ -65,6 +66,7 @@ class MainPredictor:
         cur_cash = self.real_data[:, 0]
         time_until_force = [config['max_not_service_days'] for i in range(num_terminals)]
 
+        days = 3
         for day in range(1, days):
             print(f"DAY {day}")
             mask = []
@@ -216,4 +218,4 @@ if __name__ == '__main__':
     #     print(visited)
     #     for path in paths:
     #         print(path)
-    predictor.build_json(args.output_path)
+    # predictor.build_json(args.output_path)
