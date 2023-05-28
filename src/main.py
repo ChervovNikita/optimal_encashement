@@ -7,6 +7,7 @@ importlib.reload(vrpp)
 importlib.reload(predict)
 import warnings
 import json
+import argparse
 
 warnings.simplefilter('ignore')
 
@@ -122,10 +123,16 @@ class MainPredictor:
 
 
 if __name__ == '__main__':
-    predictor = MainPredictor('data/raw/times v4.csv',
-                              'data/raw/terminal_data_hackathon v4.xlsx',
-                              'models/catboost_zero.pkl',
-                              'models/tid_mean.pkl')
+    parser = argparse.ArgumentParser('Optimal encashment', add_help=False)
+    parser.add_argument('--dist_path', default="data/raw/times v4.csv", type=str)
+    parser.add_argument('--incomes_path', default="data/raw/terminal_data_hackathon v4.xlsx", type=str)
+    parser.add_argument('--model_path', default="models/catboost_zero.pkl", type=str)
+    parser.add_argument('--tid_path', default="models/tid_mean.pkl", type=str)
+    parser.add_argument('--output_path', default="data/processed/raw_report.json", type=str)
+
+    args = parser.parse_args()
+
+    predictor = MainPredictor(args.dist_path, args.incomes_path, args.model_path, args.tid_path)
     day_losses, day_visited, day_paths = predictor.simulate()
     # for i, (loss, visited, paths) in enumerate(zip(day_losses, day_visited, day_paths)):
     #     print("=" * 50, f"DAY {i}")
@@ -133,4 +140,4 @@ if __name__ == '__main__':
     #     print(visited)
     #     for path in paths:
     #         print(path)
-    predictor.build_json('data/processed/raw_report.json')
+    predictor.build_json(args.output_path)
