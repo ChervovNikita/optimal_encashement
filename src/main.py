@@ -15,6 +15,7 @@ import importlib
 importlib.reload(vrpp)
 importlib.reload(predict)
 import warnings
+import json
 
 warnings.simplefilter('ignore')
 
@@ -23,7 +24,7 @@ INF = 1e9
 config = {'num_terminals': 1630,
           'persent_day_income': 0.02 / 365,
           'terminal_service_cost': 100,
-          'terminal_service_persent': 0, #0.01
+          'terminal_service_persent': 1e-4, #0.01
           'max_terminal_money': 1000000,
           'max_not_service_days': 14,
           'armored_car_day_cost': 20000,
@@ -36,16 +37,17 @@ config = {'num_terminals': 1630,
 
 class MainPredictor:
     def __init__(self, dist_path, incomes_path, predictor_path, tid_path):
-        self.predicted_data = predict.proccessing(incomes_path, predictor_path, tid_path).to_numpy()[:, 1:]
+        # self.predicted_data = predict.proccessing(incomes_path, predictor_path, tid_path).to_numpy()[:, 1:]
         self.real_data = pd.read_excel(incomes_path, 'Incomes')
         self.real_data = self.real_data[self.real_data.columns[1:]].values.copy()
-        # self.predicted_data = self.real_data.copy()  # CHAAAAAAAAAAANGE THIS
+        self.predicted_data = self.real_data.copy()  # CHAAAAAAAAAAANGE THIS
 
         dist = pd.read_csv(dist_path)
         le = preprocessing.LabelEncoder()
         le.fit(dist['Origin_tid'])
         dist['from_int'] = le.transform(dist['Origin_tid'])
         dist['to_int'] = le.transform(dist['Destination_tid'])
+        self.raw_results = None
 
         self.vrp = vrpp.VRPP(dist, 10, 10 * 60, config['num_vehicles'], solution_limit=100, time_limit=100, dead_loss=False)
 
@@ -114,22 +116,31 @@ class MainPredictor:
             day_losses.append(cur_loss + config['armored_car_day_cost'] * num_vehicles)
             print(f"LOSS {day_losses[-1]}")
 
+        self.raw_results = (day_losses, day_visited, day_paths)
         return day_losses, day_visited, day_paths
+
+    def build_json(self, results_path):
+        data = {'num_vehicles': config['num_vehicles'], 'logs': []}
+        losss, visiteds, pathss = self.raw_results
+        for i, (loss, visited, paths) in enumerate(zip(losss, visiteds, pathss)):
+            day_log = {'loss': loss, 'visited': visited, 'paths': []}
+            for path in paths:
+                day_log['paths'].append(path)
+            data['logs'].append(day_log)
+        json.dump(data, open(results_path, 'w'), indent=4)
 
 
 if __name__ == '__main__':
-    predictor = MainPredictor('data/times v4.csv',
-                              'data/terminal_data_hackathon v4.xlsx',
+    predictor = MainPredictor('data/raw/times v4.csv',
+                              'data/raw/terminal_data_hackathon v4.xlsx',
                               'inference_incomes/catboost.pkl',
                               'inference_incomes/tid_mean.pkl')
     day_losses, day_visited, day_paths = predictor.simulate()
-    for i, (loss, visited, paths) in enumerate(zip(day_losses, day_visited, day_paths)):
-        print("=" * 50, f"DAY {i}")
-        print(loss)
-        print(visited)
-        for path in paths:
-            print(path)
-
-
-
+    # for i, (loss, visited, paths) in enumerate(zip(day_losses, day_visited, day_paths)):
+    #     print("=" * 50, f"DAY {i}")
+    #     print(loss)
+    #     print(visited)
+    #     for path in paths:
+    #         print(path)
+    predictor.build_json('data/processed/raw_report.json')
 
