@@ -6,12 +6,13 @@ from tqdm.auto import tqdm
 from sklearn.preprocessing import LabelEncoder as LE
 import argparse
 from collections import defaultdict
+from main import config
 
 
 # get command line arguments
 def get_args_parser():
     parser = argparse.ArgumentParser('Image segmentation', add_help=False)
-    parser.add_argument('--report_json', default="raw_report.json", type=str)
+    parser.add_argument('--report_json', default="raw_report_4.json", type=str)
     parser.add_argument('--income_path', default="terminal_data_hackathon v4.xlsx", type=str)
     parser.add_argument('--times_path', default="times v4.csv", type=str)
     parser.add_argument('--output_path', default="res.xlsx", type=str)
@@ -49,10 +50,11 @@ def main():
     cols = ['статья расходов'] + [str(x) for x in pd.date_range("2022-09-01", periods=91, freq="D")]
     agg_df = pd.DataFrame(columns=cols)
     # aggregate datasets
+    num_vehicles = 4
     agg_df.loc[0] = ['фондирование'] + fond_df.drop("TID", axis=1).sum().tolist()
     agg_df.loc[1] = ['инкассация'] + inc_df.drop("TID", axis=1).sum().tolist()
-    agg_df.loc[2] = ['стоимость броневиков'] + [100000 for _ in range(91)]
-    agg_df.loc[3] = ['итого'] + (fond_df.drop("TID", axis=1).sum() + inc_df.drop("TID", axis=1).sum() + 100000).tolist()
+    agg_df.loc[2] = ['стоимость броневиков'] + [num_vehicles * config['armored_car_day_cost'] for _ in range(91)]
+    agg_df.loc[3] = ['итого'] + (fond_df.drop("TID", axis=1).sum() + inc_df.drop("TID", axis=1).sum() + num_vehicles * config['armored_car_day_cost']).tolist()
     q = pd.read_csv(args.times_path)
     # calc distance matrix and get tid decoder
     terms = pd.read_excel(args.income_path)  # 'terminal_data_hackathon v4.xlsx'
