@@ -12,7 +12,7 @@ from main import config
 # get command line arguments
 def get_args_parser():
     parser = argparse.ArgumentParser('Image segmentation', add_help=False)
-    parser.add_argument('--report_json', default="raw_report_4.json", type=str)
+    parser.add_argument('--report_json', default="raw_report_final.json", type=str)
     parser.add_argument('--income_path', default="terminal_data_hackathon v4.xlsx", type=str)
     parser.add_argument('--times_path', default="times v4.csv", type=str)
     parser.add_argument('--output_path', default="res.xlsx", type=str)
@@ -113,3 +113,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('incomes_report', parents=[get_args_parser()])
     args = parser.parse_args()
     main()
+
+    # python3 src/report.py --report_json=data/processed/raw_report_final.json --income_path="data/raw/terminal_data_hackathon v4.xlsx"
+    # --times_path="data/raw/times v4.csv" --output_path="data/processed/report_4.xlsx"

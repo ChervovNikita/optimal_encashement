@@ -35,11 +35,12 @@ config = {
     'inverse_delta_loss': 1000,
     'vrp_time_limit': 1000,
     'vrp_solution_limit': 1000,
-    'days': None,
+    'days': 3,
 }
 
 # Local - 5veh + 50inverse = 12544977.
 # Local (3) - 4veh + 1000inverse = 2010909046.0972607
+
 
 class MainPredictor:
     """
@@ -84,6 +85,88 @@ class MainPredictor:
             return INF
         return 2 ** (config['max_not_service_days'] - days_left) * config['inverse_delta_loss'] + delta_loss
 
+    def simulate_one_day(self, cur_cash, time_until_force, day, days):
+        cur_cash = cur_cash.copy()
+        time_until_force = time_until_force.copy()
+
+        num_vehicles = config['num_vehicles']
+        num_terminals = config['num_terminals']
+
+        hist = {'losses': [],
+                'paths': [],
+                'visited': [],
+                'costs': [],
+                'days_until_death': []}
+
+        print(f"DAY {day}")
+        mask = []
+        cost = []
+        to_counter = [0 for i in range(config['max_not_service_days'] + 1)]
+        # iterate over terminals
+        force_for_show_all = []
+        for i in range(num_terminals):
+            # calculate amount of days we have
+            assert time_until_force[i] >= 0
+            force = time_until_force[i]
+            # also if it is money limit or limit will be reached soon (uses predicted data)
+            # we say that it is important to process this terminal soon
+            if cur_cash[i] > config['max_terminal_money']:
+                force = 0
+            elif cur_cash[i] + self.predicted_data[i, day] > config['max_terminal_money']:
+                force = min(1, force)
+
+            # this logs show how many day until deadline
+            force_for_show = time_until_force[i]
+            current_money = cur_cash[i]
+            for forecast in range(min(force_for_show, days - day)):
+                if current_money > config['max_terminal_money']:
+                    force_for_show = forecast
+                    break
+                current_money += self.predicted_data[i, day + forecast]
+
+            assert force_for_show >= 0
+            to_counter[force_for_show] += 1
+            mask.append(1)
+            force_for_show_all.append(force_for_show)
+
+            adds = [cur_cash]
+            for forecast in range(30):
+                adds.append(self.predicted_data[i, day + forecast])
+
+            # update costs using how many days left and optimal_mask.py (dynamic programming) predictions
+            cost.append(int(self.get_cost(force, optimal_mask.find_optimal(len(adds), time_until_force[i], adds))))
+
+        # run vehicle routing problem solver
+        print(to_counter)
+        visited, paths = self.vrp.find_vrp(cost, mask)
+
+        hist['days_until_death'].append(force_for_show_all)
+        hist['costs'].append(cost)
+
+        hist['paths'].append(paths)
+        hist['visited'].append(visited)
+
+        # read real data and update loss
+        cur_loss = 0
+        for i in range(num_terminals):
+            if cur_cash[i] > config['max_terminal_money'] or time_until_force[i] == 0:
+                if not visited[i]:
+                    cur_loss += INF
+
+            if visited[i]:
+                cur_loss += max(config['terminal_service_cost'], cur_cash[i] * config['terminal_service_persent'])
+                cur_cash[i] = 0
+                time_until_force[i] = config['max_not_service_days']
+            else:
+                time_until_force[i] -= 1
+
+            cur_loss += cur_cash[i] * config['persent_day_income']
+            cur_cash[i] += self.real_data[i, day]
+
+        hist['losses'].append(cur_loss + config['armored_car_day_cost'] * num_vehicles)
+        print(f"LOSS {hist['losses'][-1]}, Sum loss {sum(hist['losses'])}")
+        return hist, cur_cash, time_until_force
+
     def simulate(self):
         """
             return oprimal paths for every day
@@ -98,102 +181,36 @@ class MainPredictor:
         num_terminals = config['num_terminals']
         num_vehicles = config['num_vehicles']
 
-        day_losses = []
-        day_paths = []
-        day_visited = []
-        hist_costs = []
-        hist_days_until_death = []
+        hist = {'losses': [],
+                'paths': [],
+                'visited': [],
+                'costs': [],
+                'days_until_death': []}
 
         cur_cash = self.real_data[:, 0]
         time_until_force = [config['max_not_service_days'] for i in range(num_terminals)]
 
         # iterate over days
         for day in range(1, days):
-            print(f"DAY {day}")
-            mask = []
-            cost = []
-            to_counter = [0 for i in range(config['max_not_service_days'] + 1)]
-            # iterate over terminals
-            force_for_show_all = []
-            for i in range(num_terminals):
-                # calculate amount of days we have
-                assert time_until_force[i] >= 0
-                force = time_until_force[i]
-                # also if it is money limit or limit will be reached soon (uses predicted data)
-                # we say that it is important to process this terminal soon
-                if cur_cash[i] > config['max_terminal_money']:
-                    force = 0
-                elif cur_cash[i] + self.predicted_data[i, day] > config['max_terminal_money']:
-                    force = min(1, force)
-
-                # this logs show how many day until deadline
-                force_for_show = time_until_force[i]
-                current_money = cur_cash[i]
-                for forecast in range(min(force_for_show, days - day)):
-                    if current_money > config['max_terminal_money']:
-                        force_for_show = forecast
-                        break
-                    current_money += self.predicted_data[i, day + forecast]
-
-                assert force_for_show >= 0
-                to_counter[force_for_show] += 1
-                mask.append(1)
-                force_for_show_all.append(force_for_show)
-
-                adds = [cur_cash]
-                for forecast in range(30):
-                    adds.append(self.predicted_data[i, day + forecast])
-
-                # update costs using how many days left and optimal_mask.py (dynamic programming) predictions
-                cost.append(int(self.get_cost(force, optimal_mask.find_optimal(len(adds), time_until_force[i], adds))))
-
-            # run vehicle routing problem solver
-            print(to_counter)
-            visited, paths = self.vrp.find_vrp(cost, mask)
-
-            hist_days_until_death.append(force_for_show_all)
-            hist_costs.append(cost)
-
-            day_paths.append(paths)
-            day_visited.append(visited)
-
-            # read real data and update loss
-            cur_loss = 0
-            for i in range(num_terminals):
-                if cur_cash[i] > config['max_terminal_money'] or time_until_force[i] == 0:
-                    if not visited[i]:
-                        cur_loss += INF
-
-                if visited[i]:
-                    cur_loss += max(config['terminal_service_cost'], cur_cash[i] * config['terminal_service_persent'])
-                    cur_cash[i] = 0
-                    time_until_force[i] = config['max_not_service_days']
-                else:
-                    time_until_force[i] -= 1
-
-                cur_loss += cur_cash[i] * config['persent_day_income']
-                cur_cash[i] += self.real_data[i, day]
-
-            day_losses.append(cur_loss + config['armored_car_day_cost'] * num_vehicles)
-            print(f"LOSS {day_losses[-1]}, Sum loss {sum(day_losses)}")
+            cur_hist, cur_cash, time_until_force = self.simulate_one_day(cur_cash, time_until_force, day, days)
+            for k, v in cur_hist.items():
+                hist[k] += v
 
         # save logs
-        self.raw_results = (day_losses, day_visited, day_paths, hist_costs, hist_days_until_death)
-        return day_losses, day_visited, day_paths, hist_costs, hist_days_until_death
+        self.raw_results = hist
+        return hist
 
     def build_json(self, results_path):
         """ save logs to convinient format, so we can create report """
-        data = {'num_vehicles': config['num_vehicles'], 'logs': []}
-        losss, visiteds, pathss, costss, hist_days_until_deaths = self.raw_results
-        for i, (loss, visited, paths, costs, hist_days_until_death) in enumerate(zip(losss, visiteds, pathss, costss, hist_days_until_deaths)):
-            day_log = {'loss': loss,
-                       'visited': visited,
-                       'paths': [],
-                       'costs': costs,
-                       'dayes_until_death': hist_days_until_death}
-            for path in paths:
-                day_log['paths'].append(path)
+        data = {'num_vehicles': config['num_vehicles'],
+                'logs': []}
+
+        for i in range(len(self.raw_results['losses'])):
+            day_log = {}
+            for k in self.raw_results.keys():
+                day_log[k] = self.raw_results[k][i]
             data['logs'].append(day_log)
+
         json.dump(data, open(results_path, 'w'), indent=4)
 
 
@@ -211,6 +228,6 @@ if __name__ == '__main__':
 
     # run main script
     predictor = MainPredictor(args.dist_path, args.incomes_path, args.model_path, args.zero_aggregation_path)
-    day_losses, day_visited, day_paths, _, _ = predictor.simulate()
+    hist = predictor.simulate()
     predictor.build_json(args.output_path)
 
