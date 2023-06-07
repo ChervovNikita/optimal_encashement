@@ -78,10 +78,6 @@ signed main() {
     if (skip_res > INF / 2 || take_res > INF / 2) {
         cout << "0\n";
     } else {
-        int delta = take_res - skip_res;
-        if (delta > 100) delta = 100;
-        else if (delta < -100) delta = -100;
-        delta = 50 + (delta) / 2;
-        cout << delta << '\n';
+        cout << take_res - skip_res << '\n';
     }
 }
