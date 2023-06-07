@@ -96,11 +96,13 @@ class MainPredictor:
                 'paths': [],
                 'visited': [],
                 'costs': [],
-                'days_until_death': []}
+                'days_until_death': [],
+                'dp': []}
 
         print(f"DAY {day}")
         mask = []
         cost = []
+        dp = []
         to_counter = [0 for i in range(config['max_not_service_days'] + 1)]
         # iterate over terminals
         time_until_cash_limit = self.get_time_until_cash_limit(cur_cash, day, days)
@@ -127,6 +129,8 @@ class MainPredictor:
 
             # update costs using how many days left and optimal_mask.py (dynamic programming) predictions
             dp_res = optimal_mask.find_optimal(len(adds), time_until_force[i], adds)
+            dp.append(dp_res)
+            dp_res *= -1
             if day > 14 and nearest_force >= 5 and dp_res > 0:
                 cost.append(0)
             else:
@@ -138,7 +142,7 @@ class MainPredictor:
 
         hist['days_until_death'].append(days_until_death)
         hist['costs'].append(cost)
-
+        hist['dp'].append(dp)
         hist['paths'].append(paths)
         hist['visited'].append(visited)
 
@@ -191,7 +195,8 @@ class MainPredictor:
                 'paths': [],
                 'visited': [],
                 'costs': [],
-                'days_until_death': []}
+                'days_until_death': [],
+                'dp': []}
 
         cur_cash = self.real_data[:, 0]
         time_until_force = [config['max_not_service_days'] for i in range(num_terminals)]
@@ -224,7 +229,7 @@ class MainPredictor:
 
 if __name__ == '__main__':
     # argument parser
-    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     parser = argparse.ArgumentParser('Optimal encashment', add_help=False)
     parser.add_argument('--dist_path', default="data/raw/times v4.csv", type=str)
     parser.add_argument('--incomes_path', default="data/raw/terminal_data_hackathon v4.xlsx", type=str)
