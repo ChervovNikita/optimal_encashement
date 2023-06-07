@@ -35,7 +35,7 @@ config = {
     'inverse_delta_loss': 1000,
     'vrp_time_limit': 1000,
     'vrp_solution_limit': 1000,
-    'days': 3,
+    'days': None,
 }
 
 # Local - 5veh + 50inverse = 12544977.
@@ -103,44 +103,40 @@ class MainPredictor:
         cost = []
         to_counter = [0 for i in range(config['max_not_service_days'] + 1)]
         # iterate over terminals
-        force_for_show_all = []
+        time_until_cash_limit = self.get_time_until_cash_limit(cur_cash, day, days)
+        days_until_death = []
         for i in range(num_terminals):
             # calculate amount of days we have
             assert time_until_force[i] >= 0
             force = time_until_force[i]
             # also if it is money limit or limit will be reached soon (uses predicted data)
             # we say that it is important to process this terminal soon
-            if cur_cash[i] > config['max_terminal_money']:
-                force = 0
-            elif cur_cash[i] + self.predicted_data[i, day] > config['max_terminal_money']:
-                force = min(1, force)
+            if time_until_cash_limit[i] <= 1:
+                force = min(time_until_cash_limit[i], force)
 
             # this logs show how many day until deadline
-            force_for_show = time_until_force[i]
-            current_money = cur_cash[i]
-            for forecast in range(min(force_for_show, days - day)):
-                if current_money > config['max_terminal_money']:
-                    force_for_show = forecast
-                    break
-                current_money += self.predicted_data[i, day + forecast]
-
-            assert force_for_show >= 0
-            to_counter[force_for_show] += 1
+            nearest_force = min(time_until_force[i], time_until_cash_limit[i])
+            assert nearest_force >= 0
+            to_counter[nearest_force] += 1
             mask.append(1)
-            force_for_show_all.append(force_for_show)
+            days_until_death.append(nearest_force)
 
             adds = [cur_cash]
             for forecast in range(30):
                 adds.append(self.predicted_data[i, day + forecast])
 
             # update costs using how many days left and optimal_mask.py (dynamic programming) predictions
-            cost.append(int(self.get_cost(force, optimal_mask.find_optimal(len(adds), time_until_force[i], adds))))
+            dp_res = optimal_mask.find_optimal(len(adds), time_until_force[i], adds)
+            if day > 14 and nearest_force >= 5 and dp_res > 0:
+                cost.append(0)
+            else:
+                cost.append(int(self.get_cost(force, 0)))
 
         # run vehicle routing problem solver
         print(to_counter)
         visited, paths = self.vrp.find_vrp(cost, mask)
 
-        hist['days_until_death'].append(force_for_show_all)
+        hist['days_until_death'].append(days_until_death)
         hist['costs'].append(cost)
 
         hist['paths'].append(paths)
@@ -164,8 +160,18 @@ class MainPredictor:
             cur_cash[i] += self.real_data[i, day]
 
         hist['losses'].append(cur_loss + config['armored_car_day_cost'] * num_vehicles)
-        print(f"LOSS {hist['losses'][-1]}, Sum loss {sum(hist['losses'])}")
         return hist, cur_cash, time_until_force
+
+    def get_time_until_cash_limit(self, cur_cash, day, days):
+        res = [INF] * config['num_terminals']
+        for i in range(config['num_terminals']):
+            current_money = cur_cash[i]
+            for forecast in range(days - day):
+                if current_money > config['max_terminal_money']:
+                    res[i] = forecast
+                    break
+                current_money += self.predicted_data[i, day + forecast]
+        return res
 
     def simulate(self):
         """
@@ -192,9 +198,11 @@ class MainPredictor:
 
         # iterate over days
         for day in range(1, days):
+            # time_until_cash_limit = self.get_time_until_cash_limit(cur_cash, day, days)
             cur_hist, cur_cash, time_until_force = self.simulate_one_day(cur_cash, time_until_force, day, days)
             for k, v in cur_hist.items():
                 hist[k] += v
+            print(f"LOSS {hist['losses'][-1]}, Sum loss {sum(hist['losses'])}")
 
         # save logs
         self.raw_results = hist
@@ -216,13 +224,13 @@ class MainPredictor:
 
 if __name__ == '__main__':
     # argument parser
-    # os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     parser = argparse.ArgumentParser('Optimal encashment', add_help=False)
     parser.add_argument('--dist_path', default="data/raw/times v4.csv", type=str)
     parser.add_argument('--incomes_path', default="data/raw/terminal_data_hackathon v4.xlsx", type=str)
     parser.add_argument('--model_path', default="models/catboost_zero.pkl", type=str)
     parser.add_argument('--zero_aggregation_path', default="models/zero_aggregation.pkl", type=str)
-    parser.add_argument('--output_path', default="data/processed/raw_report_4.json", type=str)
+    parser.add_argument('--output_path', default="data/processed/raw_report_4_dp.json", type=str)
 
     args = parser.parse_args()
 
