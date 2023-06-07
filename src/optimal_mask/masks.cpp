@@ -7,12 +7,12 @@ const int max_wait = 14;
 const int max_cash = 1000000;
 const double INF = 1e9;
 
-inline double loss(double was, double add, bool take) {
+inline double loss(double was, bool take) {
     if (take) {
-        return max(100., was / 1e4) + add * 2 / 100 / 365;
+        return max(100., was / 1e4);
     } else {
         if (was >= max_cash) return INF;
-        return (was + add) * 2 / 100 / 365;
+        return was * 2 / 100 / 365;
     }
 }
 
@@ -37,7 +37,7 @@ signed main() {
 
         for (int day = 0; day < days; ++day) {
             ++current_wait;
-            cur_loss += loss(cur_cash, add[day], mask & (1 << day));
+            cur_loss += loss(cur_cash, mask & (1 << day));
             if (mask & (1 << day)) {
                 first_take = min(first_take, day);
                 current_wait = 0;
@@ -65,24 +65,29 @@ signed main() {
     }
 
 
-    if (best_skip_loss < best_loss) {
-        cout << "0 0\n";
-//        cout << begin_with << ' ';
-//        for (int i = 0; i < days; ++i) {
-//            cout << (bool)(best_skip_mask & (1 << i)) << ' ';
-//            if (best_skip_mask & (1 << i)) begin_with = 0;
-//            begin_with += add[i];
-//            cout << begin_with << ' ';
-//        }
-//        cout << '\n' << best_skip_loss << '\n';
+    if (best_skip_loss > INF / 2 || best_loss > INF / 2) {
+        cout << "0\n";
     } else {
-        cout << "1 " << best_skip_loss - best_loss << '\n';
-//        for (int i = 0; i < days; ++i) {
-//            cout << (bool)(best_mask & (1 << i));
-//        }
-//        cout << '\n';
-//        for (int i = 0; i < days; ++i) {
-//            cout << (bool)(best_skip_mask & (1 << i));
-//        }
+        cout << best_loss - best_skip_loss << '\n';
     }
+//    if (best_skip_loss < best_loss) {
+//        cout << "0 0\n";
+////        cout << begin_with << ' ';
+////        for (int i = 0; i < days; ++i) {
+////            cout << (bool)(best_skip_mask & (1 << i)) << ' ';
+////            if (best_skip_mask & (1 << i)) begin_with = 0;
+////            begin_with += add[i];
+////            cout << begin_with << ' ';
+////        }
+////        cout << '\n' << best_skip_loss << '\n';
+//    } else {
+//        cout << "1 " << best_skip_loss - best_loss << '\n';
+////        for (int i = 0; i < days; ++i) {
+////            cout << (bool)(best_mask & (1 << i));
+////        }
+////        cout << '\n';
+////        for (int i = 0; i < days; ++i) {
+////            cout << (bool)(best_skip_mask & (1 << i));
+////        }
+//    }
 }
