@@ -5,12 +5,15 @@ import random
 
 code_path = 'src/optimal_mask/main.cpp'
 script_path = 'src/cpp_mask'
-buffer = 'data/processed/buffer'
+buffer = 'data/processed/buffer3'
 
 
 def find_optimal(day, wait, adds):
     # additional = random.randint(0, 100000000000)
     # buffer = buffer_origin + str(additional)
+    # if random.random() < 0.1:
+    #     print(day, wait, adds)
+
     with open(buffer + '_in', 'w') as f:
         f.write(f'{day} {wait}\n{" ".join([str(add) for add in adds])}\n')
     with open(buffer + "_out", 'w') as f:
@@ -18,8 +21,10 @@ def find_optimal(day, wait, adds):
     if not os.path.exists(script_path):
         print('Build script')
         os.system(f'g++ {code_path} -o {script_path}')
+    # else:
+        # print('Script was not built')
     os.system(f'{script_path} < {buffer + "_in"} > {buffer + "_out"}')
-    delta = int(open(buffer + "_out", 'r').readline().strip())
+    delta = float(open(buffer + "_out", 'r').readline().strip())
     return delta
 
 

@@ -31,15 +31,17 @@ config = {
     'service_time': 10,
     'left_days_coef': 0,
     'encashment_coef': 0,
-    'num_vehicles': 4,
+    'num_vehicles': 3,
     'inverse_delta_loss': 1000,
     'vrp_time_limit': 1000,
     'vrp_solution_limit': 1000,
     'days': None,
 }
 
-# Local - 5veh + 50inverse = 12544977.
-# Local (3) - 4veh + 1000inverse = 2010909046.0972607
+# main - dp4 threshold 5
+# Local - dp4 threshold 4
+# Local2 - dp4 threshold 3
+# Local3 - 3 vehicles no dp
 
 
 class MainPredictor:
@@ -123,21 +125,23 @@ class MainPredictor:
             mask.append(1)
             days_until_death.append(nearest_force)
 
-            adds = [cur_cash]
+            adds = [cur_cash[i]]
             for forecast in range(30):
                 adds.append(self.predicted_data[i, day + forecast])
 
             # update costs using how many days left and optimal_mask.py (dynamic programming) predictions
             dp_res = optimal_mask.find_optimal(len(adds), time_until_force[i], adds)
             dp.append(dp_res)
-            dp_res *= -1
-            if day > 14 and nearest_force >= 5 and dp_res > 0:
+            # dp_res *= -1
+            if day > 14 and nearest_force >= 30 and dp_res > 0:
                 cost.append(0)
+                # cost.append(int(self.get_cost(force, 0)))
             else:
                 cost.append(int(self.get_cost(force, 0)))
 
         # run vehicle routing problem solver
-        print(to_counter)
+        print(to_counter, sum([el > 0 for el in dp]), sum([el < 0 for el in dp]), max(dp), min(dp), sum(dp))
+
         visited, paths = self.vrp.find_vrp(cost, mask)
 
         hist['days_until_death'].append(days_until_death)
@@ -229,13 +233,13 @@ class MainPredictor:
 
 if __name__ == '__main__':
     # argument parser
-    # os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     parser = argparse.ArgumentParser('Optimal encashment', add_help=False)
     parser.add_argument('--dist_path', default="data/raw/times v4.csv", type=str)
     parser.add_argument('--incomes_path', default="data/raw/terminal_data_hackathon v4.xlsx", type=str)
     parser.add_argument('--model_path', default="models/catboost_zero.pkl", type=str)
     parser.add_argument('--zero_aggregation_path', default="models/zero_aggregation.pkl", type=str)
-    parser.add_argument('--output_path', default="data/processed/raw_report_4_dp.json", type=str)
+    parser.add_argument('--output_path', default="data/processed/raw_report_3.json", type=str)
 
     args = parser.parse_args()
 
