@@ -2,6 +2,8 @@ import os
 
 import pandas as pd
 from sklearn import preprocessing
+
+import outdated.predictor_one_day
 import vrpp
 import predict
 import optimal_mask
@@ -12,6 +14,7 @@ importlib.reload(optimal_mask)
 import warnings
 import json
 import argparse
+import random
 from tqdm import tqdm
 
 warnings.simplefilter('ignore')
@@ -31,17 +34,20 @@ config = {
     'service_time': 10,
     'left_days_coef': 0,
     'encashment_coef': 0,
-    'num_vehicles': 3,
+    'num_vehicles': 4,
     'inverse_delta_loss': 1000,
     'vrp_time_limit': 1000,
     'vrp_solution_limit': 1000,
     'days': None,
 }
 
-# main - dp4 threshold 5
-# Local - dp4 threshold 4
-# Local2 - dp4 threshold 3
-# Local3 - 3 vehicles no dp
+# main - dp4 threshold 5 = 10907529
+# Local - dp4 threshold 4 = 10913919
+# Local2 - dp4 threshold 3 = 10920628
+# Local3 - 3 vehicles no dp = dead
+# Local - dp4 threshold 3 with one day dp
+# Local2 - dp4 no dp affect = 10910242.376712326
+# Local - dp4 threshold 1
 
 
 class MainPredictor:
@@ -74,6 +80,8 @@ class MainPredictor:
         self.vrp = vrpp.VRPP(dist, config['service_time'], config['work_time'], config['num_vehicles'],
                              solution_limit=config['vrp_solution_limit'],
                              time_limit=config['vrp_time_limit'], dead_loss=False)
+
+        self.one_day_predictor = outdated.predictor_one_day.Predictor(config, dist)
 
     def get_cost(self, days_left, delta_loss):
         """
@@ -108,7 +116,10 @@ class MainPredictor:
         to_counter = [0 for i in range(config['max_not_service_days'] + 1)]
         # iterate over terminals
         time_until_cash_limit = self.get_time_until_cash_limit(cur_cash, day, days)
+
+        # opt = pd.DataFrame([self.one_day_predictor.find_optimal_day(el) for el in self.predicted_data[:, day:days]])
         days_until_death = []
+        to_counter_not_zero_cost = [0 for i in range(config['max_not_service_days'] + 1)]
         for i in range(num_terminals):
             # calculate amount of days we have
             assert time_until_force[i] >= 0
@@ -131,16 +142,20 @@ class MainPredictor:
 
             # update costs using how many days left and optimal_mask.py (dynamic programming) predictions
             dp_res = optimal_mask.find_optimal(len(adds), time_until_force[i], adds)
-            dp.append(dp_res)
             # dp_res *= -1
-            if day > 14 and nearest_force >= 30 and dp_res > 0:
+            # dp_res = -(opt.loc[i, 'daily_losses'][1] - opt.loc[i, 'daily_losses'][0])
+            dp.append(dp_res)
+
+            if day > 14 and nearest_force >= 2 and dp_res > 0:
                 cost.append(0)
                 # cost.append(int(self.get_cost(force, 0)))
             else:
+                to_counter_not_zero_cost[nearest_force] += 1
                 cost.append(int(self.get_cost(force, 0)))
 
         # run vehicle routing problem solver
-        print(to_counter, sum([el > 0 for el in dp]), sum([el < 0 for el in dp]), max(dp), min(dp), sum(dp))
+        print('Force counter', to_counter)
+        print('Not zero counter', to_counter_not_zero_cost, sum([el > 0 for el in dp]), sum([el < 0 for el in dp]), max(dp), min(dp), sum(dp))
 
         visited, paths = self.vrp.find_vrp(cost, mask)
 
@@ -151,6 +166,7 @@ class MainPredictor:
         hist['visited'].append(visited)
 
         # read real data and update loss
+        visited_counter = [0 for i in range(config['max_not_service_days'] + 1)]
         cur_loss = 0
         for i in range(num_terminals):
             if cur_cash[i] > config['max_terminal_money'] or time_until_force[i] == 0:
@@ -158,6 +174,7 @@ class MainPredictor:
                     cur_loss += INF
 
             if visited[i]:
+                visited_counter[days_until_death[i]] += 1
                 cur_loss += max(config['terminal_service_cost'], cur_cash[i] * config['terminal_service_persent'])
                 cur_cash[i] = 0
                 time_until_force[i] = config['max_not_service_days']
@@ -167,6 +184,7 @@ class MainPredictor:
             cur_loss += cur_cash[i] * config['persent_day_income']
             cur_cash[i] += self.real_data[i, day]
 
+        print('Visited counter', visited_counter)
         hist['losses'].append(cur_loss + config['armored_car_day_cost'] * num_vehicles)
         return hist, cur_cash, time_until_force
 
@@ -200,7 +218,7 @@ class MainPredictor:
                 'visited': [],
                 'costs': [],
                 'days_until_death': [],
-                'dp': []}
+                'dp': [],}
 
         cur_cash = self.real_data[:, 0]
         time_until_force = [config['max_not_service_days'] for i in range(num_terminals)]
@@ -233,13 +251,15 @@ class MainPredictor:
 
 if __name__ == '__main__':
     # argument parser
-    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    id_log = random.randint(0, 1000)
+    print('Default logs file: ', "raw_report_{}.json".format(id_log))
     parser = argparse.ArgumentParser('Optimal encashment', add_help=False)
     parser.add_argument('--dist_path', default="data/raw/times v4.csv", type=str)
     parser.add_argument('--incomes_path', default="data/raw/terminal_data_hackathon v4.xlsx", type=str)
     parser.add_argument('--model_path', default="models/catboost_zero.pkl", type=str)
     parser.add_argument('--zero_aggregation_path', default="models/zero_aggregation.pkl", type=str)
-    parser.add_argument('--output_path', default="data/processed/raw_report_3.json", type=str)
+    parser.add_argument('--output_path', default="data/processed/raw_report_{}.json".format(id_log), type=str)
 
     args = parser.parse_args()
 

@@ -28,11 +28,11 @@ class Predictor:
         return loss + idx * self.config['left_days_coef'] + (len(cash) - idx) * self.config['encashment_coef']
 
     def find_optimal_day(self, cash):
-        force_id = self.config['max_not_service_days'] - 1
+        force_id = min(len(cash) - 1, self.config['max_not_service_days'] - 1)
         sum_cash = 0
         for i in range(len(cash)):
             sum_cash += cash[i]
-            if sum_cash >= self.config['max_terminal_money']:
+            if sum_cash > self.config['max_terminal_money']:
                 force_id = min(force_id, i + 1)
                 break
 
