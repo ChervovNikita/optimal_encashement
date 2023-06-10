@@ -154,30 +154,6 @@ def proccessing(data_path='terminal_data_hackathon v4.xlsx', model_path='catboos
     with open(agg_path, 'rb') as f:
         nw = pickle.load(f)
         data = data.merge(nw, on='tid', how='left')
-    url = 'http://weatherarchive.ru/Temperature/Moscow/{month}-{year}'
-    
-    stats = {}
-    for year in years:
-        stats[year] = {}
-        for month in months:
-            stats[year][month] = parse_url(url.format(month=month, year=year))
-    
-    weather = []
-    for i, (month, v) in enumerate(stats[2022].items()):
-        i = i + 1
-        for j, (temp, wet, p, wind) in enumerate(zip(v['temp'], v['wet'], v['p'], v['wind'])):
-            j = j + 1
-            si = '0' + str(i) if i < 10 else str(i)
-            sj = '0' + str(j) if j < 10 else str(j)
-
-            weather.append({'date': '2022-{}-{}'.format(si, sj),
-                            'temp': temp,
-                            'wet': wet,
-                            'p': p,
-                            'wind': wind})
-    weather = pd.DataFrame(weather)
-    weather['date'] = pd.to_datetime(weather['date'])
-    data = data.merge(weather, on='date', how='left')
     with open(model_path, 'rb') as f:
         model = pickle.load(f)
     preds = [None for _ in range(len(data))]
