@@ -49,11 +49,11 @@ python3 src/report.py --report_json=data/processed/raw_report.json --income_path
 
 Посмотрев на данные, мы увидели, что основную проблему для предсказания составляют нулевый притоки наличности. То есть когда терминал был на ремонте или еще почему-то не мог принимать наличность. В остальные дни очень хорошо себя показывает просто брать среднее значение данного терминала.
 
-<img width="997" alt="image" src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/a5d966ae-1a1a-44d2-ac95-cadff2ea28ee">
+![alt text](https://github.com/ChervovNikita/optimal_encashement/blob/master/images/1.png)
 
 В итоге мы построили отдельную модель, которая предсказывает поломки (и соответственно нулевые поступления), а если предсказывается, что все хорошо, то берем среднее значение прироста по данному терминалу.
 
-<img width="720" alt="image" src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/5aa0c4c4-f2be-4604-8c80-3d1bade3ef11">
+![alt text](https://github.com/ChervovNikita/optimal_encashement/blob/master/images/2.png)
 
 **Признаки, использованные для предсказания нулей:**
 
@@ -82,8 +82,7 @@ python3 src/report.py --report_json=data/processed/raw_report.json --income_path
 * Если дедлайн истекает одинаково скоро, то смотрим на delta_loss (экономические потери от того, что сегодня не обслужим, но обслужим завтра)
 
 Формула штрафа за то, что мы сегодня НЕ объедим данный терминал выглядит следующим образом:
-<img width="844" alt="image" src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/46c99928-ac93-4b14-8086-ebe47b241887">
-
+![alt text](https://github.com/ChervovNikita/optimal_encashement/blob/master/images/3.png)
 
 Здесь days_left - это сколько дней осталось до обязательного инкасирования (либо переполнится по нашим прогнозам, либо пройдет две недели с момента последней инкасации)
 А delta_loss - экономические потери от того, что сегодня не обслужим, но обслужим завтра (без учета стоимости броневиков).
@@ -92,7 +91,7 @@ python3 src/report.py --report_json=data/processed/raw_report.json --income_path
 
 **Подсчет delta_loss** 
 
-<img width="983" alt="image" src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/00822a8c-7257-4efa-b304-fdf12e991d51">
+![alt text](https://github.com/ChervovNikita/optimal_encashement/blob/master/images/4.png)
 
 Мы знаем, что для любой терминал нам нужно инкасировать хотя бы раз в две недели и как только он переполнился. Получается, если мы знаем, что за k дней нам точно нужно провести один раз инкасаци мы можем определить в какой день это сделать лучше всего. Для этого нужно просто перебрать день инкасации и посчитать потери. Они будут равны тому сколько денег мы потеряем до момента инкасации и со дня инкасации до конца. 
 
@@ -117,7 +116,7 @@ python3 src/report.py --report_json=data/processed/raw_report.json --income_path
 Для этого мы вопспользовались инструментом для маршрутизации от гугла - [ortools](https://developers.google.com/optimization/routing/penalties?hl=ru). 
 В нем можно настроить кол-во машин используемых для объезда вершин, ограничение на суммарное кол-во времени в пути для одной машины (длина рабочего дня) и указать штрафы за пропуски. 
 
-<img width="500" alt="image" src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/5e03f048-d2bd-4418-a358-f9e22009acd2">
+![alt text](https://github.com/ChervovNikita/optimal_encashement/blob/master/images/5.png)
 
 ## Результаты
 
