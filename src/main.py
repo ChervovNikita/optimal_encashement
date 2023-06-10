@@ -93,7 +93,7 @@ class MainPredictor:
 
         if days_left == 0:
             return INF
-        return 2 ** (config['max_not_service_days'] - days_left) * config['inverse_delta_loss'] + delta_loss
+        return 2 ** (config['max_not_service_days'] - days_left) + delta_loss
 
     def simulate_one_day(self, cur_cash, time_until_force, day, days):
         cur_cash = cur_cash.copy()
@@ -146,8 +146,10 @@ class MainPredictor:
             # dp_res = -(opt.loc[i, 'daily_losses'][1] - opt.loc[i, 'daily_losses'][0])
             dp.append(dp_res)
 
-            if day > 14 and nearest_force >= 2 and dp_res > 0:
-                cost.append(0)
+            if day > 14 and nearest_force >= 2:
+                # cost.append(1)
+                # cost.append(-int(dp_res) if dp_res < 0 else 0)
+                cost.append(int(self.get_cost(force, 0) * 4) if dp_res > 0 else 0)
                 # cost.append(int(self.get_cost(force, 0)))
             else:
                 to_counter_not_zero_cost[nearest_force] += 1

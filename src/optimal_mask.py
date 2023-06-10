@@ -5,7 +5,7 @@ import random
 
 code_path = 'src/optimal_mask/main.cpp'
 script_path = 'src/cpp_mask'
-buffer = 'data/processed/buffer3'
+buffer = 'data/processed/buffer2'
 
 
 def find_optimal(day, wait, adds):
