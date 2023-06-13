@@ -3,7 +3,7 @@
 
 Полное условие задачи можно найти в файле [statements.pdf](https://github.com/ChervovNikita/optimal_encashement/blob/master/statements.pdf).
 
-Команда: **Algoritmistic Heist**.
+Команда: **Algorithmic Heist**.
 
 Состав команды: Вольнов Сергей, Червов Никита, Ильин Павел.
 
