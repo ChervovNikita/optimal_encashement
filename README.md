@@ -7,6 +7,8 @@
 
 Состав команды: Вольнов Сергей, Червов Никита, Ильин Павел.
 
+Защита нашего решения: [YouTube link](https://www.youtube.com/watch?v=qXX8dV4XNis&t=20557s).
+
 По результатам соревнования мы заняли второе место🥈.
 <p align="center">
   <img src="https://github.com/ChervovNikita/optimal_encashement/blob/master/images/team.jpg" alt="drawing" height="500"/>
@@ -128,6 +130,7 @@ python3 src/report.py --report_json=data/processed/raw_report.json --income_path
 ![alt text](https://github.com/ChervovNikita/optimal_encashement/blob/master/images/5.png)
 
 ## Результаты
+Отчет в заявленном жюри формате: [report.xlsx](https://github.com/ChervovNikita/optimal_encashement/blob/master/report.xlsx)
 
 Ниже представлены финальные метрики, посчитанные на всем выданном нам промежутке (3 месяца):
 
