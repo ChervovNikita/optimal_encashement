@@ -1,13 +1,15 @@
 #  Модель по построению оптимальных маршрутов инкасации платежных терминалов
-Это была [задача №6](https://leaders2023.innoagency.ru/task_6) в рамках хакатона [лидеры цифоровой трансформации](https://leaders2023.innoagency.ru/)
+Это была [задача №6](https://leaders2023.innoagency.ru/task_6) в рамках хакатона [лидеры цифоровой трансформации](https://leaders2023.innoagency.ru/).
 
-Команда: **Algoritmistic Heist**
+Полное условие задачи можно найти в файле [statements.pdf](https://github.com/ChervovNikita/optimal_encashement/blob/master/statements.pdf).
 
-Состав команды: Вольнов Сергей, Червов Никита, Ильин Павел
+Команда: **Algoritmistic Heist**.
+
+Состав команды: Вольнов Сергей, Червов Никита, Ильин Павел.
 
 По результатам соревнования мы заняли второе место🥈.
 <p align="center">
-  <img src="https://github.com/ChervovNikita/optimal_encashement/assets/44319901/d5ab33d6-aa21-4fbd-a9c7-0987e10cb81a" alt="drawing" height="500"/>
+  <img src="https://github.com/ChervovNikita/optimal_encashement/blob/master/images/team.jpg" alt="drawing" height="500"/>
 </p>
 
 
